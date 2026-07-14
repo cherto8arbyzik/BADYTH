@@ -31,8 +31,8 @@ Lead a small frontier posse through a cursed expedition: scout and prepare by da
 ## Vertical-slice content ceiling
 
 - One greybox biome.
-- Six controllable units using one shared prototype role.
-- One camp objective.
+- One main hero and five subordinate pawns using prototype roles.
+- One broken starting base with a camp objective, ruined palisade, collapsed buildings, crates, ash, and a weak campfire.
 - One enemy archetype and three short waves.
 - Six draftable relics.
 - One complete day/night cycle with victory, defeat, and restart.
@@ -46,6 +46,8 @@ The player can select one or more units, right-click a destination, order the sq
 Acceptance criteria:
 
 - Six units can cross the greybox without entering obstacles.
+- The starting base reads as a damaged settlement, not an empty test arena.
+- The hero is visually distinct from the pawns.
 - Every selected unit receives a unique destination.
 - A wall with a valid opening is navigated; a sealed wall returns no route.
 - Selection and commands are understandable without a tutorial.

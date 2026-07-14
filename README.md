@@ -35,7 +35,8 @@ This is a deliberately narrow technical slice, not a content-complete game. It c
 
 - a one-page product definition in `docs/GDD.md`;
 - architecture and replacement boundaries in `docs/ARCHITECTURE.md`;
-- a code-generated greybox scene;
+- a code-generated greybox scene with a ruined starting base;
+- a visually distinct main hero and subordinate pawns;
 - box selection, formation commands, and wood gathering;
 - a lightweight grid A* implementation with diagonal corner protection;
 - basic local separation between moving units;
