@@ -3,7 +3,8 @@ using Hollowwest.Navigation;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Hollowwest.Tests;
+namespace Hollowwest.Tests
+{
 
 public sealed class GridNavigationServiceTests
 {
@@ -68,4 +69,5 @@ public sealed class GridNavigationServiceTests
 
         Assert.That(found, Is.False);
     }
+}
 }

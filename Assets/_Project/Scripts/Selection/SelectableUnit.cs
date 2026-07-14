@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Hollowwest.Selection;
+namespace Hollowwest.Selection
+{
 
 public sealed class SelectableUnit : MonoBehaviour
 {
@@ -47,4 +48,5 @@ public sealed class SelectableUnit : MonoBehaviour
     {
         ActiveUnitsInternal.Remove(this);
     }
+}
 }

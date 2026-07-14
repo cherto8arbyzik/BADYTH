@@ -1,6 +1,7 @@
 using UnityEngine;
 
-namespace Hollowwest.Presentation;
+namespace Hollowwest.Presentation
+{
 
 public sealed class RtsCameraController : MonoBehaviour
 {
@@ -62,4 +63,5 @@ public sealed class RtsCameraController : MonoBehaviour
     {
         transform.position = _pivot - transform.forward * _distance;
     }
+}
 }

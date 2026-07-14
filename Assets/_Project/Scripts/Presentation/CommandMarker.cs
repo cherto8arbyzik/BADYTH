@@ -1,6 +1,7 @@
 using UnityEngine;
 
-namespace Hollowwest.Presentation;
+namespace Hollowwest.Presentation
+{
 
 public sealed class CommandMarker : MonoBehaviour
 {
@@ -40,4 +41,5 @@ public sealed class CommandMarker : MonoBehaviour
             Destroy(gameObject);
         }
     }
+}
 }

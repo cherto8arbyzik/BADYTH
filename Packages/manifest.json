@@ -2,7 +2,6 @@
   "dependencies": {
     "com.unity.test-framework": "1.4.6",
     "com.unity.modules.imgui": "1.0.0",
-    "com.unity.modules.input": "1.0.0",
     "com.unity.modules.physics": "1.0.0",
     "com.unity.modules.ui": "1.0.0"
   }

@@ -3,7 +3,8 @@ using Hollowwest.Presentation;
 using Hollowwest.Selection;
 using UnityEngine;
 
-namespace Hollowwest.Prototype;
+namespace Hollowwest.Prototype
+{
 
 public sealed class PrototypeBootstrap : MonoBehaviour
 {
@@ -178,4 +179,5 @@ public sealed class PrototypeBootstrap : MonoBehaviour
 
         return material;
     }
+}
 }

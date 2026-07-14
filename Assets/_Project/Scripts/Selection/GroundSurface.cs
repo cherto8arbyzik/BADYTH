@@ -1,7 +1,9 @@
 using UnityEngine;
 
-namespace Hollowwest.Selection;
+namespace Hollowwest.Selection
+{
 
 public sealed class GroundSurface : MonoBehaviour
 {
+}
 }

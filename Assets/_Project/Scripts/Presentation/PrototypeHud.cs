@@ -1,7 +1,8 @@
 using Hollowwest.Selection;
 using UnityEngine;
 
-namespace Hollowwest.Presentation;
+namespace Hollowwest.Presentation
+{
 
 public sealed class PrototypeHud : MonoBehaviour
 {
@@ -19,10 +20,10 @@ public sealed class PrototypeHud : MonoBehaviour
         EnsureStyles();
 
         GUI.Box(new Rect(18f, 18f, 390f, 134f), GUIContent.none);
-        GUI.Label(new Rect(34f, 28f, 340f, 30f), "HOLLOWWEST — movement proof", _titleStyle);
+        GUI.Label(new Rect(34f, 28f, 340f, 30f), "HOLLOWWEST â€” movement proof", _titleStyle);
         GUI.Label(
             new Rect(34f, 62f, 350f, 80f),
-            "LMB / drag: select   •   RMB: formation move\nWASD / arrows: pan   •   Wheel: zoom   •   Esc: clear\n" +
+            "LMB / drag: select   â€¢   RMB: formation move\nWASD / arrows: pan   â€¢   Wheel: zoom   â€¢   Esc: clear\n" +
             $"Selected: {(_selection == null ? 0 : _selection.SelectedCount)}",
             _bodyStyle);
     }
@@ -48,4 +49,5 @@ public sealed class PrototypeHud : MonoBehaviour
             normal = { textColor = Color.white }
         };
     }
+}
 }

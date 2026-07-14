@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Hollowwest.Core;
+namespace Hollowwest.Core
+{
 
 public static class FormationPlanner
 {
@@ -91,4 +92,5 @@ public static class FormationPlanner
             usedSlots[bestSlot] = true;
         }
     }
+}
 }

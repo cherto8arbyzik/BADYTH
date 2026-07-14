@@ -4,7 +4,8 @@ using Hollowwest.Navigation;
 using Hollowwest.Presentation;
 using UnityEngine;
 
-namespace Hollowwest.Selection;
+namespace Hollowwest.Selection
+{
 
 public sealed class SelectionController : MonoBehaviour
 {
@@ -232,4 +233,5 @@ public sealed class SelectionController : MonoBehaviour
             normal = { background = texture }
         };
     }
+}
 }

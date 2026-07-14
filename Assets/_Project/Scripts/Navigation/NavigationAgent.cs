@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using Hollowwest.Core;
 using UnityEngine;
 
-namespace Hollowwest.Navigation;
+namespace Hollowwest.Navigation
+{
 
 public sealed class NavigationAgent : MonoBehaviour
 {
@@ -122,4 +123,5 @@ public sealed class NavigationAgent : MonoBehaviour
 
         return separation;
     }
+}
 }

@@ -3,7 +3,8 @@ using Hollowwest.Core;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Hollowwest.Tests;
+namespace Hollowwest.Tests
+{
 
 public sealed class FormationPlannerTests
 {
@@ -54,4 +55,5 @@ public sealed class FormationPlannerTests
         Assert.That(new HashSet<int>(assignments), Has.Count.EqualTo(slots.Count));
         Assert.That(assignments, Has.All.GreaterThanOrEqualTo(0));
     }
+}
 }

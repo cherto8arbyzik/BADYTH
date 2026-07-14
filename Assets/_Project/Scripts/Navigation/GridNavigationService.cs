@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using Hollowwest.Core;
 using UnityEngine;
 
-namespace Hollowwest.Navigation;
+namespace Hollowwest.Navigation
+{
 
 public sealed class GridNavigationService : INavigationService
 {
@@ -361,4 +362,5 @@ public sealed class GridNavigationService : INavigationService
             return root.Cell;
         }
     }
+}
 }
