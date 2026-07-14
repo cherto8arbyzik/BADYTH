@@ -18,8 +18,8 @@ public sealed class SelectableUnit : MonoBehaviour
         _selectionIndicator = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         _selectionIndicator.name = "SelectionIndicator";
         _selectionIndicator.transform.SetParent(transform, false);
-        _selectionIndicator.transform.localPosition = new Vector3(0f, -0.98f, 0f);
-        _selectionIndicator.transform.localScale = new Vector3(1.3f, 0.025f, 1.3f);
+        _selectionIndicator.transform.localPosition = new Vector3(0f, 0.035f, 0f);
+        _selectionIndicator.transform.localScale = new Vector3(0.72f, 0.015f, 0.72f);
 
         Collider indicatorCollider = _selectionIndicator.GetComponent<Collider>();
         indicatorCollider.enabled = false;

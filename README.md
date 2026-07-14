@@ -1,8 +1,8 @@
-# HOLLOWWEST
+# ZASTAVA
 
-Technical prototype for a small-scale single-player roguelite RTS / real-time tactics game set in a weird-west occult frontier.
+Technical prototype for a small-scale single-player RTS / colony-survival game set on a damaged Slavic frontier outpost.
 
-The current milestone proves the riskiest interaction: select a squad, issue a formation move, and route every unit around static obstacles on a grid.
+The current milestone presents one hero, a small group of villagers, a damaged starting shrine, a stylized village, gathering, formation movement, and the first day/night defence loop.
 
 ## Open the prototype
 
@@ -23,6 +23,7 @@ The first import can take several minutes while Unity resolves the Test Framewor
 - Survive the first night wave after the day timer expires.
 - WASD / arrow keys: pan the camera.
 - Mouse wheel: zoom.
+- H / F1: show or hide the compact controls panel.
 - Escape: clear selection.
 
 ## Tests
@@ -35,8 +36,9 @@ This is a deliberately narrow technical slice, not a content-complete game. It c
 
 - a one-page product definition in `docs/GDD.md`;
 - architecture and replacement boundaries in `docs/ARCHITECTURE.md`;
-- a code-generated greybox scene with a ruined starting base;
-- a visually distinct main hero and subordinate pawns;
+- a code-generated stylized 3D village with a ruined starting base;
+- Quaternius CC0 Medieval Village building models;
+- a visually distinct main hero and subordinate low-poly villagers;
 - box selection, formation commands, and wood gathering;
 - a lightweight grid A* implementation with diagonal corner protection;
 - basic local separation between moving units;
@@ -45,3 +47,7 @@ This is a deliberately narrow technical slice, not a content-complete game. It c
 - Edit Mode tests for the deterministic planning code.
 
 The navigation code implements `INavigationService`. When A* Pathfinding Project Pro is licensed and imported, it can be added behind that interface without rewriting selection, commands, or unit presentation.
+
+## Third-party assets
+
+Building models come from the [Quaternius Medieval Village Pack](https://quaternius.com/packs/medievalvillage.html), licensed under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The exact license notice is stored next to the imported FBX files.

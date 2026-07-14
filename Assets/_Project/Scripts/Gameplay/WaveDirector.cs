@@ -1,4 +1,5 @@
 using Hollowwest.Navigation;
+using Hollowwest.Prototype;
 using UnityEngine;
 
 namespace Hollowwest.Gameplay
@@ -12,6 +13,7 @@ public sealed class WaveDirector : MonoBehaviour
     private GridNavigationService _navigation;
     private CampCore _campCore;
     private Material _enemyMaterial;
+    private Material _eyeMaterial;
     private bool _running;
     private int _remainingToSpawn;
     private float _spawnTimer;
@@ -24,6 +26,13 @@ public sealed class WaveDirector : MonoBehaviour
         _navigation = navigation;
         _campCore = campCore;
         _enemyMaterial = enemyMaterial;
+        _eyeMaterial = new Material(Shader.Find("Standard"))
+        {
+            color = new Color(1f, 0.24f, 0.12f),
+            hideFlags = HideFlags.DontSave
+        };
+        _eyeMaterial.EnableKeyword("_EMISSION");
+        _eyeMaterial.SetColor("_EmissionColor", new Color(1f, 0.08f, 0.02f));
     }
 
     public void StartNight(int nightNumber)
@@ -56,21 +65,29 @@ public sealed class WaveDirector : MonoBehaviour
     {
         Vector3[] spawnPoints =
         {
-            new Vector3(10.5f, 0.65f, 7.5f),
-            new Vector3(10.5f, 0.65f, -7.5f),
-            new Vector3(-10.5f, 0.65f, 7.5f),
-            new Vector3(-10.5f, 0.65f, -7.5f)
+            new Vector3(14.5f, 0f, 10.5f),
+            new Vector3(14.5f, 0f, -10.5f),
+            new Vector3(-14.5f, 0f, 10.5f),
+            new Vector3(-14.5f, 0f, -10.5f)
         };
 
         Vector3 position = spawnPoints[_spawnIndex % spawnPoints.Length];
         _spawnIndex++;
 
-        GameObject enemy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        GameObject enemy = new("Night Fiend");
         enemy.name = "Night Fiend";
         enemy.transform.SetParent(transform);
         enemy.transform.position = position;
-        enemy.transform.localScale = new Vector3(0.68f, 0.72f, 0.68f);
-        enemy.GetComponent<Renderer>().sharedMaterial = new Material(_enemyMaterial);
+
+        CapsuleCollider bodyCollider = enemy.AddComponent<CapsuleCollider>();
+        bodyCollider.center = new Vector3(0f, 0.82f, 0f);
+        bodyCollider.radius = 0.46f;
+        bodyCollider.height = 1.65f;
+
+        StylizedCharacterBuilder.BuildEnemy(
+            enemy.transform,
+            new Material(_enemyMaterial),
+            _eyeMaterial);
 
         NavigationAgent agent = enemy.AddComponent<NavigationAgent>();
         agent.Initialize(_navigation);

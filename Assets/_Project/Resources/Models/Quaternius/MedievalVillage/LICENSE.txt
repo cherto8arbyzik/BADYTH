@@ -1,0 +1,11 @@
+Medieval Village Pack
+Copyright (c) Quaternius
+
+Source:
+https://quaternius.com/packs/medievalvillage.html
+
+License: Creative Commons Zero v1.0 Universal (CC0-1.0)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The original pack contains 44 medieval buildings and props. This project includes
+only the FBX building models needed by the runtime-generated prototype scene.

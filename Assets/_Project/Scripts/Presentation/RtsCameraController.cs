@@ -7,13 +7,13 @@ public sealed class RtsCameraController : MonoBehaviour
 {
     private Vector3 _pivot;
     private Bounds _movementBounds;
-    private float _distance = 22f;
+    private float _distance = 28.5f;
 
     public void Initialize(Vector3 pivot, Bounds movementBounds)
     {
         _pivot = pivot;
         _movementBounds = movementBounds;
-        transform.rotation = Quaternion.Euler(55f, 0f, 0f);
+        transform.rotation = Quaternion.Euler(57f, -35f, 0f);
         ApplyTransform();
     }
 
