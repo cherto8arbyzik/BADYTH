@@ -1,3 +1,4 @@
+using Hollowwest.Economy;
 using Hollowwest.Navigation;
 using Hollowwest.Presentation;
 using Hollowwest.Selection;
@@ -13,6 +14,7 @@ public sealed class PrototypeBootstrap : MonoBehaviour
     private static readonly Color UnitColor = new(0.30f, 0.48f, 0.68f);
     private static readonly Color SelectionColor = new(0.30f, 1f, 0.45f, 0.72f);
     private static readonly Color CommandColor = new(1f, 0.72f, 0.20f, 0.85f);
+    private static readonly Color WoodColor = new(0.42f, 0.28f, 0.15f);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void CreateIfNeeded()
@@ -35,6 +37,8 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         Material unitMaterial = CreateMaterial(UnitColor);
         Material selectionMaterial = CreateMaterial(SelectionColor, true);
         Material commandMaterial = CreateMaterial(CommandColor, true);
+        Material woodMaterial = CreateMaterial(WoodColor);
+        ResourceStockpile stockpile = gameObject.AddComponent<ResourceStockpile>();
 
         Bounds playBounds = new(Vector3.zero, new Vector3(24f, 1f, 18f));
         CreateGround(groundMaterial);
@@ -51,13 +55,17 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         CreateObstacle(new Vector3(4f, 0.75f, 4f), new Vector3(5f, 1.5f, 1.5f), obstacleMaterial, navigation);
         CreateObstacle(new Vector3(4f, 0.75f, -4f), new Vector3(5f, 1.5f, 1.5f), obstacleMaterial, navigation);
 
-        CreateSquad(unitMaterial, selectionMaterial, navigation);
+        CreateResourceNode(new Vector3(8f, 0.5f, 0f), woodMaterial, navigation);
+        CreateResourceNode(new Vector3(-8f, 0.5f, 5f), woodMaterial, navigation);
+        CreateResourceNode(new Vector3(0f, 0.5f, -6f), woodMaterial, navigation);
+
+        CreateSquad(unitMaterial, selectionMaterial, navigation, stockpile);
 
         SelectionController selection = gameObject.AddComponent<SelectionController>();
         selection.Initialize(worldCamera, commandMaterial);
 
         PrototypeHud hud = gameObject.AddComponent<PrototypeHud>();
-        hud.Initialize(selection);
+        hud.Initialize(selection, stockpile);
     }
 
     private void CreateGround(Material material)
@@ -121,10 +129,28 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         navigation.SetBlocked(obstacle.GetComponent<Collider>().bounds, 0.38f);
     }
 
+    private void CreateResourceNode(
+        Vector3 position,
+        Material material,
+        GridNavigationService navigation)
+    {
+        GameObject resource = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        resource.name = "Wood Cache";
+        resource.transform.SetParent(transform);
+        resource.transform.position = position;
+        resource.transform.localScale = new Vector3(1.2f, 1f, 1.2f);
+        resource.GetComponent<Renderer>().sharedMaterial = new Material(material);
+        resource.AddComponent<ResourceNode>();
+
+        Physics.SyncTransforms();
+        navigation.SetBlocked(resource.GetComponent<Collider>().bounds, 0.2f);
+    }
+
     private void CreateSquad(
         Material unitMaterial,
         Material selectionMaterial,
-        GridNavigationService navigation)
+        GridNavigationService navigation,
+        ResourceStockpile stockpile)
     {
         Vector3[] positions =
         {
@@ -153,6 +179,9 @@ public sealed class PrototypeBootstrap : MonoBehaviour
 
             NavigationAgent agent = unit.AddComponent<NavigationAgent>();
             agent.Initialize(navigation);
+
+            ResourceCollector collector = unit.AddComponent<ResourceCollector>();
+            collector.Initialize(stockpile);
         }
     }
 

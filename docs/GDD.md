@@ -39,9 +39,9 @@ Lead a small frontier posse through a cursed expedition: scout and prepare by da
 
 Anything beyond this list waits until the movement-and-command prototype is fun and reliable.
 
-## Current milestone: movement proof
+## Current milestone: day raid proof
 
-The player can select one or more units and right-click a destination. Units receive unique formation slots, find routes around static obstacles, avoid cutting blocked diagonal corners, and apply light local separation while moving.
+The player can select one or more units, right-click a destination, and order the squad to gather wood from marked resource caches. Units receive unique formation slots, find routes around static obstacles, avoid cutting blocked diagonal corners, and apply light local separation while moving.
 
 Acceptance criteria:
 
@@ -49,8 +49,10 @@ Acceptance criteria:
 - Every selected unit receives a unique destination.
 - A wall with a valid opening is navigated; a sealed wall returns no route.
 - Selection and commands are understandable without a tutorial.
+- Selected units can gather wood from a visible resource node.
+- The HUD shows selected unit count and gathered wood.
 - The planning logic is covered by deterministic Edit Mode tests.
 
 ## Explicit non-goals for this milestone
 
-Combat, enemies, procedural map generation, economy, save data, meta progression, final art, audio, multiplayer, and Asset Store navigation integration.
+Combat, enemies, procedural map generation, save data, meta progression, final art, audio, multiplayer, and Asset Store navigation integration.

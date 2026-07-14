@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Hollowwest.Core;
+using Hollowwest.Economy;
 using Hollowwest.Navigation;
 using Hollowwest.Presentation;
 using UnityEngine;
@@ -129,6 +130,14 @@ public sealed class SelectionController : MonoBehaviour
 
         Ray ray = _camera.ScreenPointToRay(screenPosition);
         RaycastHit[] hits = Physics.RaycastAll(ray, 200f);
+        ResourceNode resource = FindResourceHit(hits);
+
+        if (resource != null)
+        {
+            IssueGatherCommand(resource);
+            return;
+        }
+
         Vector3 destination = default;
         bool foundGround = false;
 
@@ -171,6 +180,34 @@ public sealed class SelectionController : MonoBehaviour
         }
 
         CommandMarker.Spawn(destination, _commandMarkerMaterial);
+    }
+
+    private ResourceNode FindResourceHit(RaycastHit[] hits)
+    {
+        foreach (RaycastHit hit in hits)
+        {
+            ResourceNode resource = hit.collider.GetComponentInParent<ResourceNode>();
+            if (resource != null && !resource.IsDepleted)
+            {
+                return resource;
+            }
+        }
+
+        return null;
+    }
+
+    private void IssueGatherCommand(ResourceNode resource)
+    {
+        foreach (SelectableUnit unit in _selected)
+        {
+            ResourceCollector collector = unit.GetComponent<ResourceCollector>();
+            if (collector != null)
+            {
+                collector.Gather(resource);
+            }
+        }
+
+        CommandMarker.Spawn(resource.InteractionPoint, _commandMarkerMaterial);
     }
 
     private void AddSelection(SelectableUnit unit)
