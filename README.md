@@ -20,6 +20,7 @@ The first import can take several minutes while Unity resolves the Test Framewor
 - Shift + selection: add to the current selection.
 - Right click ground: move selected units in formation.
 - Right click a wood cache: selected units gather wood.
+- Survive the first night wave after the day timer expires.
 - WASD / arrow keys: pan the camera.
 - Mouse wheel: zoom.
 - Escape: clear selection.
@@ -39,6 +40,7 @@ This is a deliberately narrow technical slice, not a content-complete game. It c
 - a lightweight grid A* implementation with diagonal corner protection;
 - basic local separation between moving units;
 - a first resource counter for the day-raid loop;
+- a timed day phase, camp core, one night wave, and simple auto-combat;
 - Edit Mode tests for the deterministic planning code.
 
 The navigation code implements `INavigationService`. When A* Pathfinding Project Pro is licensed and imported, it can be added behind that interface without rewriting selection, commands, or unit presentation.

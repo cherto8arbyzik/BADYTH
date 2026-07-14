@@ -19,6 +19,11 @@ public sealed class NavigationAgent : MonoBehaviour
     private int _waypointIndex;
 
     public bool IsMoving => _waypointIndex < _path.Count;
+    public float Speed
+    {
+        get => speed;
+        set => speed = Mathf.Max(0f, value);
+    }
 
     public void Initialize(INavigationService navigation)
     {
@@ -35,6 +40,12 @@ public sealed class NavigationAgent : MonoBehaviour
         }
 
         return true;
+    }
+
+    public void Stop()
+    {
+        _path.Clear();
+        _waypointIndex = 0;
     }
 
     private void OnEnable()

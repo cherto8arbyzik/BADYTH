@@ -1,4 +1,5 @@
 using Hollowwest.Economy;
+using Hollowwest.Gameplay;
 using Hollowwest.Navigation;
 using Hollowwest.Presentation;
 using Hollowwest.Selection;
@@ -15,6 +16,8 @@ public sealed class PrototypeBootstrap : MonoBehaviour
     private static readonly Color SelectionColor = new(0.30f, 1f, 0.45f, 0.72f);
     private static readonly Color CommandColor = new(1f, 0.72f, 0.20f, 0.85f);
     private static readonly Color WoodColor = new(0.42f, 0.28f, 0.15f);
+    private static readonly Color CoreColor = new(0.48f, 0.38f, 0.24f);
+    private static readonly Color EnemyColor = new(0.58f, 0.18f, 0.24f);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void CreateIfNeeded()
@@ -38,6 +41,8 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         Material selectionMaterial = CreateMaterial(SelectionColor, true);
         Material commandMaterial = CreateMaterial(CommandColor, true);
         Material woodMaterial = CreateMaterial(WoodColor);
+        Material coreMaterial = CreateMaterial(CoreColor);
+        Material enemyMaterial = CreateMaterial(EnemyColor);
         ResourceStockpile stockpile = gameObject.AddComponent<ResourceStockpile>();
 
         Bounds playBounds = new(Vector3.zero, new Vector3(24f, 1f, 18f));
@@ -55,6 +60,7 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         CreateObstacle(new Vector3(4f, 0.75f, 4f), new Vector3(5f, 1.5f, 1.5f), obstacleMaterial, navigation);
         CreateObstacle(new Vector3(4f, 0.75f, -4f), new Vector3(5f, 1.5f, 1.5f), obstacleMaterial, navigation);
 
+        CampCore campCore = CreateCampCore(coreMaterial, navigation);
         CreateResourceNode(new Vector3(8f, 0.5f, 0f), woodMaterial, navigation);
         CreateResourceNode(new Vector3(-8f, 0.5f, 5f), woodMaterial, navigation);
         CreateResourceNode(new Vector3(0f, 0.5f, -6f), woodMaterial, navigation);
@@ -64,8 +70,14 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         SelectionController selection = gameObject.AddComponent<SelectionController>();
         selection.Initialize(worldCamera, commandMaterial);
 
+        WaveDirector waveDirector = gameObject.AddComponent<WaveDirector>();
+        waveDirector.Initialize(navigation, campCore, enemyMaterial);
+
+        GameSession session = gameObject.AddComponent<GameSession>();
+        session.Initialize(waveDirector, campCore);
+
         PrototypeHud hud = gameObject.AddComponent<PrototypeHud>();
-        hud.Initialize(selection, stockpile);
+        hud.Initialize(selection, stockpile, session);
     }
 
     private void CreateGround(Material material)
@@ -129,6 +141,20 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         navigation.SetBlocked(obstacle.GetComponent<Collider>().bounds, 0.38f);
     }
 
+    private CampCore CreateCampCore(Material material, GridNavigationService navigation)
+    {
+        GameObject core = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        core.name = "Camp Core";
+        core.transform.SetParent(transform);
+        core.transform.position = new Vector3(0f, 0.65f, 0f);
+        core.transform.localScale = new Vector3(1.6f, 1.3f, 1.6f);
+        core.GetComponent<Renderer>().sharedMaterial = material;
+
+        Physics.SyncTransforms();
+        navigation.SetBlocked(core.GetComponent<Collider>().bounds, 0.1f);
+        return core.AddComponent<CampCore>();
+    }
+
     private void CreateResourceNode(
         Vector3 position,
         Material material,
@@ -182,6 +208,8 @@ public sealed class PrototypeBootstrap : MonoBehaviour
 
             ResourceCollector collector = unit.AddComponent<ResourceCollector>();
             collector.Initialize(stockpile);
+
+            unit.AddComponent<UnitCombat>();
         }
     }
 

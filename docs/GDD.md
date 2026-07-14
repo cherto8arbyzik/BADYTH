@@ -39,9 +39,9 @@ Lead a small frontier posse through a cursed expedition: scout and prepare by da
 
 Anything beyond this list waits until the movement-and-command prototype is fun and reliable.
 
-## Current milestone: day raid proof
+## Current milestone: first day/night proof
 
-The player can select one or more units, right-click a destination, and order the squad to gather wood from marked resource caches. Units receive unique formation slots, find routes around static obstacles, avoid cutting blocked diagonal corners, and apply light local separation while moving.
+The player can select one or more units, right-click a destination, order the squad to gather wood from marked resource caches, then survive a first night wave around a camp core. Units receive unique formation slots, find routes around static obstacles, avoid cutting blocked diagonal corners, and apply light local separation while moving.
 
 Acceptance criteria:
 
@@ -50,9 +50,11 @@ Acceptance criteria:
 - A wall with a valid opening is navigated; a sealed wall returns no route.
 - Selection and commands are understandable without a tutorial.
 - Selected units can gather wood from a visible resource node.
-- The HUD shows selected unit count and gathered wood.
+- The HUD shows selected unit count, gathered wood, day timer, phase, enemy count, and core health.
+- When day ends, a small enemy wave spawns and attacks the camp core.
+- Player units automatically damage nearby enemies.
 - The planning logic is covered by deterministic Edit Mode tests.
 
 ## Explicit non-goals for this milestone
 
-Combat, enemies, procedural map generation, save data, meta progression, final art, audio, multiplayer, and Asset Store navigation integration.
+Procedural map generation, save data, meta progression, final art, audio, multiplayer, and Asset Store navigation integration.

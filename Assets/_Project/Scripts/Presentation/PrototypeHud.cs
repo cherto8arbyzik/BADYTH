@@ -1,4 +1,5 @@
 using Hollowwest.Economy;
+using Hollowwest.Gameplay;
 using Hollowwest.Selection;
 using UnityEngine;
 
@@ -9,27 +10,49 @@ public sealed class PrototypeHud : MonoBehaviour
 {
     private SelectionController _selection;
     private ResourceStockpile _stockpile;
+    private GameSession _session;
     private GUIStyle _titleStyle;
     private GUIStyle _bodyStyle;
 
-    public void Initialize(SelectionController selection, ResourceStockpile stockpile)
+    public void Initialize(SelectionController selection, ResourceStockpile stockpile, GameSession session)
     {
         _selection = selection;
         _stockpile = stockpile;
+        _session = session;
     }
 
     private void OnGUI()
     {
         EnsureStyles();
 
-        GUI.Box(new Rect(18f, 18f, 430f, 154f), GUIContent.none);
-        GUI.Label(new Rect(34f, 28f, 380f, 30f), "ZASTAVA - day raid proof", _titleStyle);
+        GUI.Box(new Rect(18f, 18f, 455f, 198f), GUIContent.none);
+        GUI.Label(new Rect(34f, 28f, 400f, 30f), "ZASTAVA - day/night proof", _titleStyle);
         GUI.Label(
-            new Rect(34f, 62f, 390f, 96f),
+            new Rect(34f, 62f, 420f, 136f),
             "LMB / drag: select   |   RMB ground: move\nRMB wood cache: gather   |   WASD: pan   |   Wheel: zoom\n" +
             $"Selected: {(_selection == null ? 0 : _selection.SelectedCount)}\n" +
-            $"Wood: {(_stockpile == null ? 0 : _stockpile.Wood)}",
+            $"Wood: {(_stockpile == null ? 0 : _stockpile.Wood)}\n" +
+            BuildSessionLine(),
             _bodyStyle);
+    }
+
+    private string BuildSessionLine()
+    {
+        if (_session == null)
+        {
+            return "Phase: -";
+        }
+
+        string coreHealth = _session.CampCore == null
+            ? "-"
+            : $"{_session.CampCore.Health}/{_session.CampCore.MaxHealth}";
+
+        if (_session.Phase == GamePhase.Day)
+        {
+            return $"Phase: DAY   Time to night: {Mathf.CeilToInt(_session.TimeRemaining)}s   Core: {coreHealth}";
+        }
+
+        return $"Phase: {_session.Phase.ToString().ToUpperInvariant()}   Enemies: {EnemyUnit.ActiveEnemies.Count}   Core: {coreHealth}";
     }
 
     private void EnsureStyles()

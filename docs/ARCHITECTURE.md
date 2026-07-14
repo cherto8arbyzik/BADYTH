@@ -13,6 +13,14 @@ FormationPlanner ----> NavigationAgent (one per unit)
                               |
                     GridNavigationService
                     [future AstarPathAdapter]
+
+GameSession ----> WaveDirector ----> EnemyUnit
+      |                 |
+      v                 v
+  CampCore          NavigationAgent
+
+UnitCombat ----> EnemyUnit
+ResourceCollector ----> ResourceNode ----> ResourceStockpile
 ```
 
 - `SelectionController` owns player intent: selection and move commands.
@@ -20,6 +28,11 @@ FormationPlanner ----> NavigationAgent (one per unit)
 - `NavigationAgent` owns only route following and lightweight neighbour separation.
 - `INavigationService` prevents the rest of the game from depending on a particular pathfinding vendor.
 - `GridNavigationService` is the prototype implementation. It uses an eight-neighbour A* grid and disallows diagonal corner cutting.
+- `GameSession` owns the current day/night phase and win/loss state for the prototype.
+- `WaveDirector` spawns the first night wave and gives enemies their target.
+- `CampCore` is the current lose condition; enemies damage it when they reach the base.
+- `UnitCombat` is intentionally simple auto-combat so the first wave is testable before a proper combat model exists.
+- `ResourceCollector`, `ResourceNode`, and `ResourceStockpile` are the first day-raid economy slice.
 - `PrototypeBootstrap` creates the greybox at runtime so the scene contains no fragile object references or paid assets.
 
 ## Why the prototype does not import A* Pathfinding Project
