@@ -6,3 +6,10 @@
 *.unity text eol=lf
 *.asset text eol=lf
 *.md text eol=lf
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.tga filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.glb filter=lfs diff=lfs merge=lfs -text
+Assets/_Project/Resources/Models/Quaternius/UltimateStylizedNature/*.png filter=lfs diff=lfs merge=lfs -text

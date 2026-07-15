@@ -20,6 +20,19 @@ public sealed class PrototypeHud : MonoBehaviour
     private GUIStyle _barBackgroundStyle;
     private GUIStyle _barFillStyle;
 
+    public static bool BlocksWorldInput(Vector2 screenPosition)
+    {
+        Vector2 guiPosition = new(screenPosition.x, Screen.height - screenPosition.y);
+        Rect phasePanel = new(14f, 12f, 270f, 92f);
+        Rect statusPanel = new(Mathf.Max(14f, Screen.width - 306f), 12f, 292f, 62f);
+        Rect controlsPanel = new(14f, Screen.height - 70f, Mathf.Min(510f, Screen.width - 28f), 58f);
+        Rect buildingPanel = new(Mathf.Max(14f, Screen.width - 334f), Screen.height - 140f, 320f, 126f);
+        return phasePanel.Contains(guiPosition) ||
+               statusPanel.Contains(guiPosition) ||
+               controlsPanel.Contains(guiPosition) ||
+               buildingPanel.Contains(guiPosition);
+    }
+
     public void Initialize(SelectionController selection, ResourceStockpile stockpile, GameSession session)
     {
         _selection = selection;
@@ -40,21 +53,32 @@ public sealed class PrototypeHud : MonoBehaviour
         EnsureStyles();
         DrawPhasePanel();
         DrawStatusPanel();
+        DrawBuildingPanel();
         DrawControlsPanel();
     }
 
     private void DrawPhasePanel()
     {
-        Rect panel = new(14f, 12f, 248f, 62f);
+        Rect panel = new(14f, 12f, 270f, 92f);
         GUI.Box(panel, GUIContent.none, _panelStyle);
-        GUI.Label(new Rect(28f, 19f, 220f, 24f), "ZASTAVA", _titleStyle);
+        GUI.Label(new Rect(28f, 18f, 230f, 24f), "ZASTAVA / TOWN DEV", _titleStyle);
 
         string phaseText = _session == null
             ? "Preparing the village"
             : BuildPhaseText();
 
         _phaseStyle.normal.textColor = GetPhaseColor();
-        GUI.Label(new Rect(28f, 44f, 220f, 22f), phaseText, _phaseStyle);
+        GUI.Label(new Rect(28f, 42f, 230f, 22f), phaseText, _phaseStyle);
+
+        if (GUI.Button(new Rect(28f, 66f, 104f, 24f), "DAY") && _session != null)
+        {
+            _session.SetDayForDevelopment();
+        }
+
+        if (GUI.Button(new Rect(142f, 66f, 124f, 24f), "NIGHT + WAVE") && _session != null)
+        {
+            _session.SetNightForDevelopment();
+        }
     }
 
     private void DrawStatusPanel()
@@ -67,7 +91,7 @@ public sealed class PrototypeHud : MonoBehaviour
         int selected = _selection == null ? 0 : _selection.SelectedCount;
         int wood = _stockpile == null ? 0 : _stockpile.Wood;
         int enemies = EnemyUnit.ActiveEnemies.Count;
-        GUI.Label(new Rect(x + 14f, 19f, 264f, 20f), $"Units {selected}     Wood {wood}     Enemies {enemies}", _bodyStyle);
+        GUI.Label(new Rect(x + 14f, 19f, 264f, 20f), $"Hero {selected}     Wood {wood}     Enemies {enemies}", _bodyStyle);
 
         int health = _session == null || _session.CampCore == null ? 0 : _session.CampCore.Health;
         int maxHealth = _session == null || _session.CampCore == null ? 100 : _session.CampCore.MaxHealth;
@@ -78,6 +102,45 @@ public sealed class PrototypeHud : MonoBehaviour
         GUI.Box(bar, GUIContent.none, _barBackgroundStyle);
         GUI.Box(new Rect(bar.x, bar.y, bar.width * healthRatio, bar.height), GUIContent.none, _barFillStyle);
         GUI.Label(new Rect(x + 238f, 40f, 45f, 20f), $"{health}", _hintStyle);
+    }
+
+    private void DrawBuildingPanel()
+    {
+        TownBuilding building = _selection == null ? null : _selection.SelectedBuilding;
+        if (building == null)
+        {
+            return;
+        }
+
+        float width = 320f;
+        float x = Mathf.Max(14f, Screen.width - width - 14f);
+        float y = Screen.height - 140f;
+        GUI.Box(new Rect(x, y, width, 126f), GUIContent.none, _panelStyle);
+        GUI.Label(new Rect(x + 14f, y + 10f, width - 28f, 24f), building.DisplayName, _titleStyle);
+
+        if (!building.IsRuined)
+        {
+            _phaseStyle.normal.textColor = new Color(0.48f, 0.92f, 0.55f);
+            GUI.Label(new Rect(x + 14f, y + 41f, width - 28f, 22f), "OPERATIONAL", _phaseStyle);
+            GUI.Label(new Rect(x + 14f, y + 67f, width - 28f, 42f), "Worker assignment will be added here next.", _hintStyle);
+            return;
+        }
+
+        int wood = _stockpile == null ? 0 : _stockpile.Wood;
+        int missing = Mathf.Max(0, building.RestorationCost - wood);
+        _phaseStyle.normal.textColor = new Color(1f, 0.54f, 0.24f);
+        GUI.Label(new Rect(x + 14f, y + 39f, width - 28f, 22f), $"RUINED  /  restoration: {building.RestorationCost} wood", _phaseStyle);
+        GUI.Label(
+            new Rect(x + 14f, y + 63f, width - 28f, 20f),
+            missing > 0 ? $"Need {missing} more wood" : "Materials ready",
+            _hintStyle);
+
+        GUI.enabled = missing == 0;
+        if (GUI.Button(new Rect(x + 14f, y + 88f, width - 28f, 26f), "RESTORE BUILDING"))
+        {
+            building.TryRestore(_stockpile);
+        }
+        GUI.enabled = true;
     }
 
     private void DrawControlsPanel()
@@ -95,11 +158,11 @@ public sealed class PrototypeHud : MonoBehaviour
         GUI.Box(panel, GUIContent.none, _panelStyle);
         GUI.Label(
             new Rect(28f, Screen.height - 62f, width - 28f, 22f),
-            "LMB select / drag    RMB move or gather    WASD pan    Wheel zoom",
+            "LMB select hero/building    RMB move or gather    WASD pan    Wheel zoom",
             _bodyStyle);
         GUI.Label(
             new Rect(28f, Screen.height - 39f, width - 28f, 20f),
-            "Tip: select villagers, then right-click a wood pile.  H or F1 hides this help.",
+            "Hero gathers wood. Click a ruined building to restore it. H or F1 hides this help.",
             _hintStyle);
     }
 
@@ -107,7 +170,7 @@ public sealed class PrototypeHud : MonoBehaviour
     {
         if (_session.Phase == GamePhase.Day)
         {
-            return $"DAY  -  night in {Mathf.CeilToInt(_session.TimeRemaining)}s";
+            return "DAY  -  no automatic timer";
         }
 
         if (_session.Phase == GamePhase.Night)

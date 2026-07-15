@@ -5,14 +5,11 @@ namespace Hollowwest.Gameplay
 
 public sealed class GameSession : MonoBehaviour
 {
-    [SerializeField] private float dayDuration = 45f;
-
     private WaveDirector _waveDirector;
     private CampCore _campCore;
     private bool _nightStarted;
 
     public GamePhase Phase { get; private set; } = GamePhase.Day;
-    public float TimeRemaining { get; private set; }
     public int NightNumber { get; private set; } = 1;
     public CampCore CampCore => _campCore;
 
@@ -21,31 +18,51 @@ public sealed class GameSession : MonoBehaviour
         _waveDirector = waveDirector;
         _campCore = campCore;
         Phase = GamePhase.Day;
-        TimeRemaining = dayDuration;
+        _nightStarted = false;
+    }
+
+    public void SetDayForDevelopment()
+    {
+        if (Phase == GamePhase.Victory)
+        {
+            NightNumber++;
+        }
+
+        if (_waveDirector != null)
+        {
+            _waveDirector.StopNight(true);
+        }
+
+        Phase = GamePhase.Day;
+        _nightStarted = false;
+    }
+
+    public void SetNightForDevelopment()
+    {
+        if (Phase == GamePhase.Night)
+        {
+            return;
+        }
+
+        if (Phase == GamePhase.Victory)
+        {
+            NightNumber++;
+        }
+
+        if (_waveDirector != null)
+        {
+            _waveDirector.StopNight(true);
+        }
+
+        Phase = GamePhase.Night;
+        _nightStarted = false;
     }
 
     private void Update()
     {
-        if (Phase == GamePhase.Day)
-        {
-            TickDay();
-            return;
-        }
-
         if (Phase == GamePhase.Night)
         {
             TickNight();
-        }
-    }
-
-    private void TickDay()
-    {
-        TimeRemaining = Mathf.Max(0f, TimeRemaining - Time.deltaTime);
-        if (TimeRemaining <= 0f)
-        {
-            Phase = GamePhase.Night;
-            _nightStarted = false;
-            TimeRemaining = 0f;
         }
     }
 

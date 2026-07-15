@@ -7,7 +7,7 @@ public sealed class RtsCameraController : MonoBehaviour
 {
     private Vector3 _pivot;
     private Bounds _movementBounds;
-    private float _distance = 28.5f;
+    private float _distance = 36f;
 
     public void Initialize(Vector3 pivot, Bounds movementBounds)
     {
@@ -44,7 +44,7 @@ public sealed class RtsCameraController : MonoBehaviour
         if (input.sqrMagnitude > 0f)
         {
             input.Normalize();
-            float panSpeed = Mathf.Lerp(7f, 13f, Mathf.InverseLerp(10f, 30f, _distance));
+            float panSpeed = Mathf.Lerp(9f, 19f, Mathf.InverseLerp(12f, 58f, _distance));
             _pivot += new Vector3(input.x, 0f, input.y) * (panSpeed * Time.deltaTime);
             _pivot.x = Mathf.Clamp(_pivot.x, _movementBounds.min.x + 3f, _movementBounds.max.x - 3f);
             _pivot.z = Mathf.Clamp(_pivot.z, _movementBounds.min.z + 3f, _movementBounds.max.z - 3f);
@@ -53,7 +53,7 @@ public sealed class RtsCameraController : MonoBehaviour
         float scroll = Input.mouseScrollDelta.y;
         if (Mathf.Abs(scroll) > 0.01f)
         {
-            _distance = Mathf.Clamp(_distance - scroll * 1.8f, 10f, 30f);
+            _distance = Mathf.Clamp(_distance - scroll * 2.4f, 12f, 58f);
         }
 
         ApplyTransform();

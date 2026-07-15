@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Hollowwest.Core;
 using Hollowwest.Economy;
+using Hollowwest.Gameplay;
 using Hollowwest.Navigation;
 using Hollowwest.Presentation;
 using UnityEngine;
@@ -24,6 +25,7 @@ public sealed class SelectionController : MonoBehaviour
     private Material _commandMarkerMaterial;
 
     public int SelectedCount => _selected.Count;
+    public TownBuilding SelectedBuilding { get; private set; }
 
     public void Initialize(Camera worldCamera, Material commandMarkerMaterial)
     {
@@ -35,6 +37,15 @@ public sealed class SelectionController : MonoBehaviour
     {
         if (_camera == null)
         {
+            return;
+        }
+
+        if (PrototypeHud.BlocksWorldInput(Input.mousePosition))
+        {
+            if (Input.GetMouseButtonUp(0))
+            {
+                _dragging = false;
+            }
             return;
         }
 
@@ -76,15 +87,29 @@ public sealed class SelectionController : MonoBehaviour
     {
         Ray ray = _camera.ScreenPointToRay(screenPosition);
         SelectableUnit unit = null;
+        TownBuilding building = null;
 
         if (Physics.Raycast(ray, out RaycastHit hit, 200f))
         {
             unit = hit.collider.GetComponentInParent<SelectableUnit>();
+            if (unit == null)
+            {
+                building = hit.collider.GetComponentInParent<TownBuilding>();
+            }
         }
+
+        if (building != null)
+        {
+            ClearSelection();
+            SelectBuilding(building);
+            return;
+        }
+
+        ClearBuildingSelection();
 
         if (!additive)
         {
-            ClearSelection();
+            ClearUnitSelection();
         }
 
         if (unit != null)
@@ -95,9 +120,11 @@ public sealed class SelectionController : MonoBehaviour
 
     private void SelectBox(Vector2 start, Vector2 end, bool additive)
     {
+        ClearBuildingSelection();
+
         if (!additive)
         {
-            ClearSelection();
+            ClearUnitSelection();
         }
 
         Rect rectangle = Rect.MinMaxRect(
@@ -223,6 +250,12 @@ public sealed class SelectionController : MonoBehaviour
 
     private void ClearSelection()
     {
+        ClearUnitSelection();
+        ClearBuildingSelection();
+    }
+
+    private void ClearUnitSelection()
+    {
         foreach (SelectableUnit unit in _selected)
         {
             if (unit != null)
@@ -232,6 +265,23 @@ public sealed class SelectionController : MonoBehaviour
         }
 
         _selected.Clear();
+    }
+
+    private void SelectBuilding(TownBuilding building)
+    {
+        ClearBuildingSelection();
+        SelectedBuilding = building;
+        SelectedBuilding.SetSelected(true);
+    }
+
+    private void ClearBuildingSelection()
+    {
+        if (SelectedBuilding != null)
+        {
+            SelectedBuilding.SetSelected(false);
+        }
+
+        SelectedBuilding = null;
     }
 
     private void OnGUI()

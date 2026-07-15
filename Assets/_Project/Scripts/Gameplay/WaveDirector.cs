@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Hollowwest.Navigation;
 using Hollowwest.Prototype;
 using UnityEngine;
@@ -18,10 +19,16 @@ public sealed class WaveDirector : MonoBehaviour
     private int _remainingToSpawn;
     private float _spawnTimer;
     private int _spawnIndex;
+    private float _spawnX = 46f;
+    private float _spawnZ = 32f;
 
     public bool IsNightComplete => _running && _remainingToSpawn <= 0 && EnemyUnit.ActiveEnemies.Count == 0;
 
-    public void Initialize(GridNavigationService navigation, CampCore campCore, Material enemyMaterial)
+    public void Initialize(
+        GridNavigationService navigation,
+        CampCore campCore,
+        Material enemyMaterial,
+        Bounds worldBounds)
     {
         _navigation = navigation;
         _campCore = campCore;
@@ -33,6 +40,8 @@ public sealed class WaveDirector : MonoBehaviour
         };
         _eyeMaterial.EnableKeyword("_EMISSION");
         _eyeMaterial.SetColor("_EmissionColor", new Color(1f, 0.08f, 0.02f));
+        _spawnX = Mathf.Max(8f, worldBounds.extents.x - 4f);
+        _spawnZ = Mathf.Max(6f, worldBounds.extents.z - 4f);
     }
 
     public void StartNight(int nightNumber)
@@ -41,6 +50,27 @@ public sealed class WaveDirector : MonoBehaviour
         _remainingToSpawn = enemiesPerNight + Mathf.Max(0, nightNumber - 1) * 4;
         _spawnTimer = 0f;
         _spawnIndex = 0;
+    }
+
+    public void StopNight(bool destroyEnemies)
+    {
+        _running = false;
+        _remainingToSpawn = 0;
+        _spawnTimer = 0f;
+
+        if (!destroyEnemies)
+        {
+            return;
+        }
+
+        List<EnemyUnit> enemies = new(EnemyUnit.ActiveEnemies);
+        foreach (EnemyUnit enemy in enemies)
+        {
+            if (enemy != null)
+            {
+                Destroy(enemy.gameObject);
+            }
+        }
     }
 
     private void Update()
@@ -65,10 +95,10 @@ public sealed class WaveDirector : MonoBehaviour
     {
         Vector3[] spawnPoints =
         {
-            new Vector3(14.5f, 0f, 10.5f),
-            new Vector3(14.5f, 0f, -10.5f),
-            new Vector3(-14.5f, 0f, 10.5f),
-            new Vector3(-14.5f, 0f, -10.5f)
+            new Vector3(_spawnX, 0f, _spawnZ),
+            new Vector3(_spawnX, 0f, -_spawnZ),
+            new Vector3(-_spawnX, 0f, _spawnZ),
+            new Vector3(-_spawnX, 0f, -_spawnZ)
         };
 
         Vector3 position = spawnPoints[_spawnIndex % spawnPoints.Length];
