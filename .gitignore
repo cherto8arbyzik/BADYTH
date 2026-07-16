@@ -13,6 +13,8 @@
 .vs/
 .vscode/
 .idea/
+__pycache__/
+*.pyc
 *.csproj
 *.sln
 *.suo
@@ -28,6 +30,8 @@
 
 # Unity/OS noise
 sysinfo.txt
+*.blend1
+*.blend2
 *.apk
 *.aab
 *.unitypackage

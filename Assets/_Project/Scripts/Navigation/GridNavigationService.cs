@@ -90,22 +90,28 @@ public sealed class GridNavigationService : INavigationService
 
     public void SetBlocked(Bounds worldBounds, float clearance = 0f)
     {
-        Bounds expanded = worldBounds;
-        expanded.Expand(new Vector3(clearance * 2f, 0f, clearance * 2f));
+        SetBlocked(worldBounds, clearance, true, null);
+    }
 
-        Vector2Int minimum = WorldToCell(expanded.min);
-        Vector2Int maximum = WorldToCell(expanded.max);
+    public IReadOnlyList<Vector2Int> ReserveBlocked(Bounds worldBounds, float clearance = 0f)
+    {
+        List<Vector2Int> reservation = new();
+        SetBlocked(worldBounds, clearance, true, reservation);
+        return reservation;
+    }
 
-        int minX = Mathf.Clamp(minimum.x, 0, _width - 1);
-        int maxX = Mathf.Clamp(maximum.x, 0, _width - 1);
-        int minY = Mathf.Clamp(minimum.y, 0, _depth - 1);
-        int maxY = Mathf.Clamp(maximum.y, 0, _depth - 1);
-
-        for (int x = minX; x <= maxX; x++)
+    public void ReleaseBlocked(IReadOnlyList<Vector2Int> reservation)
+    {
+        if (reservation == null)
         {
-            for (int y = minY; y <= maxY; y++)
+            return;
+        }
+
+        foreach (Vector2Int cell in reservation)
+        {
+            if (IsInside(cell))
             {
-                _blocked[x, y] = true;
+                _blocked[cell.x, cell.y] = false;
             }
         }
     }
@@ -251,6 +257,38 @@ public sealed class GridNavigationService : INavigationService
 
         result = default;
         return false;
+    }
+
+    private void SetBlocked(
+        Bounds worldBounds,
+        float clearance,
+        bool blocked,
+        List<Vector2Int> changedCells)
+    {
+        Bounds expanded = worldBounds;
+        expanded.Expand(new Vector3(clearance * 2f, 0f, clearance * 2f));
+
+        Vector2Int minimum = WorldToCell(expanded.min);
+        Vector2Int maximum = WorldToCell(expanded.max);
+
+        int minX = Mathf.Clamp(minimum.x, 0, _width - 1);
+        int maxX = Mathf.Clamp(maximum.x, 0, _width - 1);
+        int minY = Mathf.Clamp(minimum.y, 0, _depth - 1);
+        int maxY = Mathf.Clamp(maximum.y, 0, _depth - 1);
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int y = minY; y <= maxY; y++)
+            {
+                if (_blocked[x, y] == blocked)
+                {
+                    continue;
+                }
+
+                _blocked[x, y] = blocked;
+                changedCells?.Add(new Vector2Int(x, y));
+            }
+        }
     }
 
     private void BuildWorldPath(

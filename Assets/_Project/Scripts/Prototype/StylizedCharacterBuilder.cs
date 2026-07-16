@@ -14,7 +14,7 @@ public static class StylizedCharacterBuilder
         bool isHero,
         int variant)
     {
-        float bodyScale = isHero ? 1.08f : 0.92f;
+        float bodyScale = isHero ? 0.96f : 0.88f;
 
         CreatePart(
             root,

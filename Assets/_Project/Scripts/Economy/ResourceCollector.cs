@@ -54,7 +54,7 @@ public sealed class ResourceCollector : MonoBehaviour
 
         _harvestTimer = 0f;
         int harvested = _target.Harvest();
-        _stockpile.AddWood(harvested);
+        _stockpile.Add(_target.ResourceType, harvested);
     }
 }
 }

@@ -48,16 +48,28 @@ public sealed class TownDayNightVisuals : MonoBehaviour
             new Color(0.055f, 0.075f, 0.13f),
             night);
         RenderSettings.fogColor = Color.Lerp(
-            new Color(0.12f, 0.14f, 0.15f),
-            new Color(0.035f, 0.045f, 0.085f),
+            new Color(0.39f, 0.56f, 0.72f),
+            new Color(0.055f, 0.075f, 0.14f),
             night);
-        RenderSettings.fogDensity = Mathf.Lerp(0.006f, 0.010f, night);
+        RenderSettings.fogDensity = Mathf.Lerp(0.0025f, 0.0065f, night);
+
+        Material skybox = RenderSettings.skybox;
+        if (skybox != null)
+        {
+            skybox.SetColor(
+                "_SkyTint",
+                Color.Lerp(new Color(0.28f, 0.52f, 0.82f), new Color(0.055f, 0.085f, 0.20f), night));
+            skybox.SetColor(
+                "_GroundColor",
+                Color.Lerp(new Color(0.24f, 0.44f, 0.66f), new Color(0.025f, 0.035f, 0.075f), night));
+            skybox.SetFloat("_Exposure", Mathf.Lerp(0.82f, 0.58f, night));
+        }
 
         if (_camera != null)
         {
             _camera.backgroundColor = Color.Lerp(
-                new Color(0.055f, 0.065f, 0.075f),
-                new Color(0.012f, 0.018f, 0.040f),
+                new Color(0.44f, 0.66f, 0.86f),
+                new Color(0.025f, 0.045f, 0.12f),
                 night);
         }
     }

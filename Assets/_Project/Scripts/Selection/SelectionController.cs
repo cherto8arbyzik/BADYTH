@@ -23,20 +23,31 @@ public sealed class SelectionController : MonoBehaviour
     private bool _dragging;
     private GUIStyle _selectionBoxStyle;
     private Material _commandMarkerMaterial;
+    private DialogueController _dialogue;
 
     public int SelectedCount => _selected.Count;
     public TownBuilding SelectedBuilding { get; private set; }
 
-    public void Initialize(Camera worldCamera, Material commandMarkerMaterial)
+    public void Initialize(Camera worldCamera, Material commandMarkerMaterial, DialogueController dialogue = null)
     {
         _camera = worldCamera;
         _commandMarkerMaterial = commandMarkerMaterial;
+        _dialogue = dialogue;
     }
 
     private void Update()
     {
         if (_camera == null)
         {
+            return;
+        }
+
+        if (BuildingPlacementController.IsAnyPlacementActive ||
+            RoadPlacementController.IsAnyPlacementActive ||
+            GatheringAreaController.IsAnyGatheringActive ||
+            DialogueController.IsBlockingWorldInput)
+        {
+            _dragging = false;
             return;
         }
 
@@ -88,14 +99,26 @@ public sealed class SelectionController : MonoBehaviour
         Ray ray = _camera.ScreenPointToRay(screenPosition);
         SelectableUnit unit = null;
         TownBuilding building = null;
+        NpcDialogue npc = null;
 
         if (Physics.Raycast(ray, out RaycastHit hit, 200f))
         {
-            unit = hit.collider.GetComponentInParent<SelectableUnit>();
-            if (unit == null)
+            npc = hit.collider.GetComponentInParent<NpcDialogue>();
+            if (npc == null)
             {
-                building = hit.collider.GetComponentInParent<TownBuilding>();
+                unit = hit.collider.GetComponentInParent<SelectableUnit>();
+                if (unit == null)
+                {
+                    building = hit.collider.GetComponentInParent<TownBuilding>();
+                }
             }
+        }
+
+        if (npc != null && _dialogue != null)
+        {
+            ClearSelection();
+            _dialogue.TryBeginInteraction(npc);
+            return;
         }
 
         if (building != null)

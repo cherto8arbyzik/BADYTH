@@ -69,5 +69,31 @@ public sealed class GridNavigationServiceTests
 
         Assert.That(found, Is.False);
     }
+
+    [Test]
+    public void ReservationRelease_PreservesCellsBlockedBeforeReservation()
+    {
+        GridNavigationService grid = new(Vector3.zero, 10, 10, 1f);
+        Vector2Int permanentObstacle = new(3, 3);
+        Vector2Int constructionCell = new(2, 2);
+        grid.SetCellBlocked(permanentObstacle);
+
+        IReadOnlyList<Vector2Int> reservation = grid.ReserveBlocked(
+            new Bounds(new Vector3(3.5f, 0f, 3.5f), new Vector3(3f, 1f, 3f)));
+        bool containsPermanentObstacle = false;
+        foreach (Vector2Int cell in reservation)
+        {
+            containsPermanentObstacle |= cell == permanentObstacle;
+        }
+
+        Assert.That(grid.IsBlocked(permanentObstacle), Is.True);
+        Assert.That(grid.IsBlocked(constructionCell), Is.True);
+        Assert.That(containsPermanentObstacle, Is.False);
+
+        grid.ReleaseBlocked(reservation);
+
+        Assert.That(grid.IsBlocked(permanentObstacle), Is.True);
+        Assert.That(grid.IsBlocked(constructionCell), Is.False);
+    }
 }
 }

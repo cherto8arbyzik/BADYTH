@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Hollowwest.Core;
+using Hollowwest.Gameplay;
 using UnityEngine;
 
 namespace Hollowwest.Navigation
@@ -11,11 +12,13 @@ public sealed class NavigationAgent : MonoBehaviour
 
     [SerializeField] private float speed = 4f;
     [SerializeField] private float stoppingDistance = 0.12f;
-    [SerializeField] private float separationRadius = 1.1f;
-    [SerializeField] private float separationWeight = 0.8f;
+    [SerializeField] private float separationRadius = 0.7f;
+    [SerializeField] private float separationWeight = 0.55f;
 
     private readonly List<Vector3> _path = new();
     private INavigationService _navigation;
+    private RoadNetwork _roadNetwork;
+    private float _roadSpeedMultiplier = 1f;
     private int _waypointIndex;
 
     public bool IsMoving => _waypointIndex < _path.Count;
@@ -24,10 +27,22 @@ public sealed class NavigationAgent : MonoBehaviour
         get => speed;
         set => speed = Mathf.Max(0f, value);
     }
+    public float CurrentSpeedMultiplier =>
+        _roadNetwork == null
+            ? 1f
+            : Mathf.Max(
+                _roadNetwork.GetSpeedMultiplierAt(transform.position, 0.18f),
+                _roadNetwork.IsOnRoad(transform.position, 0.18f) ? _roadSpeedMultiplier : 1f);
 
     public void Initialize(INavigationService navigation)
     {
         _navigation = navigation;
+    }
+
+    public void ConfigureRoadMovement(RoadNetwork roadNetwork, float speedMultiplier)
+    {
+        _roadNetwork = roadNetwork;
+        _roadSpeedMultiplier = Mathf.Max(1f, speedMultiplier);
     }
 
     public bool SetDestination(Vector3 destination)
@@ -95,10 +110,11 @@ public sealed class NavigationAgent : MonoBehaviour
         }
 
         direction.Normalize();
+        float movementSpeed = speed * CurrentSpeedMultiplier;
         transform.position = Vector3.MoveTowards(
             transform.position,
             transform.position + direction,
-            speed * Time.deltaTime);
+            movementSpeed * Time.deltaTime);
 
         if (direction.sqrMagnitude > 0.001f)
         {
