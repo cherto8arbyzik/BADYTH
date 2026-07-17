@@ -12,4 +12,9 @@
 *.fbx filter=lfs diff=lfs merge=lfs -text
 *.blend filter=lfs diff=lfs merge=lfs -text
 *.glb filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
 Assets/_Project/Resources/Models/Quaternius/UltimateStylizedNature/*.png filter=lfs diff=lfs merge=lfs -text
+Assets/_Project/Resources/Models/Custom/Environment/StartingIsland/**/*.png filter=lfs diff=lfs merge=lfs -text

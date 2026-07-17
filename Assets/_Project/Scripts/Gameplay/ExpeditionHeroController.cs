@@ -20,6 +20,11 @@ public sealed class ExpeditionHeroController : MonoBehaviour
     private float _dodgeCooldown;
     private float _invulnerability;
     private Vector3 _lastMoveDirection = Vector3.forward;
+    private Transform _weaponPivot;
+    private Quaternion _weaponRestRotation;
+    private float _swingElapsed = -1f;
+    private float _swingDuration;
+    private bool _heavySwing;
 
     public int MaxHealth { get; private set; } = 100;
     public int Health { get; private set; } = 100;
@@ -31,12 +36,15 @@ public sealed class ExpeditionHeroController : MonoBehaviour
         ExpeditionSceneController sceneController,
         ExpeditionBackpack backpack,
         Vector3 movementCenter,
-        Vector2 movementRadii)
+        Vector2 movementRadii,
+        Transform weaponPivot)
     {
         _characterController = GetComponent<CharacterController>();
         _worldCamera = worldCamera;
         _sceneController = sceneController;
         _backpack = backpack;
+        _weaponPivot = weaponPivot;
+        _weaponRestRotation = weaponPivot != null ? weaponPivot.localRotation : Quaternion.identity;
         SetMovementBounds(movementCenter, movementRadii);
     }
 
@@ -114,6 +122,8 @@ public sealed class ExpeditionHeroController : MonoBehaviour
         {
             _sceneController?.TryInteract(this);
         }
+
+        UpdateWeaponAnimation();
     }
 
     private Vector3 GetCameraRelativeMovement(Vector2 rawMove)
@@ -160,6 +170,9 @@ public sealed class ExpeditionHeroController : MonoBehaviour
         }
 
         _attackCooldown = requiredCooldown;
+        _swingElapsed = 0f;
+        _swingDuration = heavy ? 0.46f : 0.28f;
+        _heavySwing = heavy;
         int damage = heavy ? 52 : 34;
         float radius = heavy ? 2.15f : 1.55f;
         Vector3 center = transform.position + transform.forward * (heavy ? 1.25f : 1.05f) + Vector3.up * 0.8f;
@@ -174,6 +187,27 @@ public sealed class ExpeditionHeroController : MonoBehaviour
         }
 
         _sceneController?.ShowAttackPulse(center, radius, heavy);
+    }
+
+    private void UpdateWeaponAnimation()
+    {
+        if (_weaponPivot == null || _swingElapsed < 0f)
+        {
+            return;
+        }
+
+        _swingElapsed += Time.deltaTime;
+        float progress = Mathf.Clamp01(_swingElapsed / Mathf.Max(0.01f, _swingDuration));
+        float endAngle = _heavySwing ? 112f : 78f;
+        float sweep = progress < 0.78f
+            ? Mathf.SmoothStep(-92f, endAngle, progress / 0.78f)
+            : Mathf.SmoothStep(endAngle, 0f, (progress - 0.78f) / 0.22f);
+        _weaponPivot.localRotation = _weaponRestRotation * Quaternion.Euler(_heavySwing ? 16f : 8f, sweep, 0f);
+        if (progress >= 1f)
+        {
+            _weaponPivot.localRotation = _weaponRestRotation;
+            _swingElapsed = -1f;
+        }
     }
 
     private void ClampToMovementBounds()

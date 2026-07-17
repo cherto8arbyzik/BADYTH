@@ -259,7 +259,13 @@ public sealed class GatheringAreaController : MonoBehaviour
             return;
         }
 
-        Vector3 center = (_dragStart + _dragEnd) * 0.5f + Vector3.up * 0.08f;
+        Vector3 center = (_dragStart + _dragEnd) * 0.5f;
+        if (GroundSurface.TryProjectPoint(center, out Vector3 projectedCenter))
+        {
+            center = projectedCenter;
+        }
+
+        center += Vector3.up * 0.08f;
         _selectionVisual.transform.position = center;
         _selectionVisual.transform.localScale = new Vector3(
             Mathf.Max(0.3f, Mathf.Abs(_dragEnd.x - _dragStart.x)),

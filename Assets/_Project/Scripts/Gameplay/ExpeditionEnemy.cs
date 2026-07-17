@@ -13,14 +13,29 @@ public sealed class ExpeditionEnemy : MonoBehaviour
     private float _attackCooldown;
     private float _hitFlash;
     private Vector3 _knockback;
+    private bool _activeOutsideAnomaly;
+    private bool _countsForDungeon;
+    private Hollowwest.Economy.ResourceType _lootType;
+    private int _lootAmount;
 
     public bool IsAlive => _health > 0;
 
-    public void Initialize(ExpeditionHeroController hero, ExpeditionSceneController sceneController, int health)
+    public void Initialize(
+        ExpeditionHeroController hero,
+        ExpeditionSceneController sceneController,
+        int health,
+        bool activeOutsideAnomaly,
+        bool countsForDungeon,
+        Hollowwest.Economy.ResourceType lootType,
+        int lootAmount)
     {
         _hero = hero;
         _sceneController = sceneController;
         _health = Mathf.Max(1, health);
+        _activeOutsideAnomaly = activeOutsideAnomaly;
+        _countsForDungeon = countsForDungeon;
+        _lootType = lootType;
+        _lootAmount = Mathf.Max(1, lootAmount);
         _renderers = GetComponentsInChildren<Renderer>();
         _baseColors = new Color[_renderers.Length];
         for (int index = 0; index < _renderers.Length; index++)
@@ -41,14 +56,19 @@ public sealed class ExpeditionEnemy : MonoBehaviour
         _knockback += Vector3.ProjectOnPlane(direction, Vector3.up).normalized * Mathf.Max(0f, force);
         if (_health == 0)
         {
-            _sceneController?.NotifyEnemyDefeated(this);
+            _sceneController?.NotifyEnemyDefeated(
+                this,
+                _countsForDungeon,
+                _lootType,
+                _lootAmount,
+                transform.position);
             Destroy(gameObject);
         }
     }
 
     private void Update()
     {
-        if (!IsAlive || _hero == null || !_hero.IsAlive || !_sceneController.IsInAnomaly)
+        if (!IsAlive || _hero == null || !_hero.IsAlive || (!_activeOutsideAnomaly && !_sceneController.IsInAnomaly))
         {
             return;
         }

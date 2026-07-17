@@ -10,7 +10,6 @@ public sealed class TownDayNightVisuals : MonoBehaviour
     private Camera _camera;
     private Light _sun;
     private Light _fill;
-    private float _nightBlend;
 
     public void Initialize(GameSession session, Camera worldCamera, Light sun, Light fill)
     {
@@ -18,29 +17,43 @@ public sealed class TownDayNightVisuals : MonoBehaviour
         _camera = worldCamera;
         _sun = sun;
         _fill = fill;
-        ApplyLighting(0f);
+        ApplyLighting(GamePhase.Day, 0f);
     }
 
     private void Update()
     {
-        bool isNight = _session != null && _session.Phase == GamePhase.Night;
-        float target = isNight ? 1f : 0f;
-        _nightBlend = Mathf.MoveTowards(_nightBlend, target, Time.deltaTime * 0.7f);
-        ApplyLighting(_nightBlend);
+        GamePhase phase = _session?.Phase ?? GamePhase.Day;
+        ApplyLighting(phase, _session?.PhaseProgress ?? 0f);
     }
 
-    private void ApplyLighting(float night)
+    private void ApplyLighting(GamePhase phase, float progress)
     {
+        float daylight = GetDaylight(phase, progress);
+        float night = 1f - daylight;
+        Color sunrise = new(1f, 0.48f, 0.22f);
+        Color day = new(1f, 0.86f, 0.68f);
+        Color moon = new(0.32f, 0.40f, 0.62f);
+        Color sunColor = phase switch
+        {
+            GamePhase.Dawn => Color.Lerp(moon, sunrise, Mathf.SmoothStep(0f, 1f, progress)),
+            GamePhase.Dusk => Color.Lerp(day, sunrise, Mathf.SmoothStep(0f, 1f, progress)),
+            GamePhase.Night => moon,
+            _ => day
+        };
+
+        float elevation = GetSunElevation(phase, progress);
+        float azimuth = Mathf.Lerp(-58f, 122f, _session?.CycleProgress ?? 0.25f);
         if (_sun != null)
         {
-            _sun.color = Color.Lerp(new Color(1f, 0.79f, 0.58f), new Color(0.32f, 0.40f, 0.62f), night);
-            _sun.intensity = Mathf.Lerp(1.35f, 0.34f, night);
+            _sun.transform.rotation = Quaternion.Euler(90f - elevation, azimuth, 0f);
+            _sun.color = sunColor;
+            _sun.intensity = Mathf.Lerp(0.10f, 1.35f, daylight);
         }
 
         if (_fill != null)
         {
             _fill.color = Color.Lerp(new Color(0.36f, 0.46f, 0.62f), new Color(0.18f, 0.24f, 0.48f), night);
-            _fill.intensity = Mathf.Lerp(0.34f, 0.62f, night);
+            _fill.intensity = Mathf.Lerp(0.34f, 0.56f, night);
         }
 
         RenderSettings.ambientLight = Color.Lerp(
@@ -72,6 +85,29 @@ public sealed class TownDayNightVisuals : MonoBehaviour
                 new Color(0.025f, 0.045f, 0.12f),
                 night);
         }
+    }
+
+    private static float GetDaylight(GamePhase phase, float progress)
+    {
+        return phase switch
+        {
+            GamePhase.Dawn => Mathf.SmoothStep(0.06f, 1f, progress),
+            GamePhase.Dusk => Mathf.SmoothStep(1f, 0.06f, progress),
+            GamePhase.Night => 0.06f,
+            GamePhase.Defeat => 0.06f,
+            _ => 1f
+        };
+    }
+
+    private static float GetSunElevation(GamePhase phase, float progress)
+    {
+        return phase switch
+        {
+            GamePhase.Dawn => Mathf.Lerp(-7f, 12f, progress),
+            GamePhase.Day => Mathf.Lerp(12f, 68f, Mathf.Sin(progress * Mathf.PI)),
+            GamePhase.Dusk => Mathf.Lerp(12f, -8f, progress),
+            _ => Mathf.Lerp(-8f, -24f, Mathf.Sin(progress * Mathf.PI))
+        };
     }
 }
 }

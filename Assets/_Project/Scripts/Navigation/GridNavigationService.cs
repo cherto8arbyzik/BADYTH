@@ -25,8 +25,14 @@ public sealed class GridNavigationService : INavigationService
     private readonly int _depth;
     private readonly float _cellSize;
     private readonly bool[,] _blocked;
+    private readonly Func<Vector3, Vector3> _surfaceProjector;
 
-    public GridNavigationService(Vector3 origin, int width, int depth, float cellSize)
+    public GridNavigationService(
+        Vector3 origin,
+        int width,
+        int depth,
+        float cellSize,
+        Func<Vector3, Vector3> surfaceProjector = null)
     {
         if (width <= 0)
         {
@@ -48,6 +54,7 @@ public sealed class GridNavigationService : INavigationService
         _depth = depth;
         _cellSize = cellSize;
         _blocked = new bool[width, depth];
+        _surfaceProjector = surfaceProjector;
     }
 
     public int Width => _width;
@@ -61,6 +68,12 @@ public sealed class GridNavigationService : INavigationService
     }
 
     public Vector3 CellToWorld(Vector2Int cell)
+    {
+        Vector3 world = CellToWorldUnprojected(cell);
+        return _surfaceProjector == null ? world : _surfaceProjector(world);
+    }
+
+    public Vector3 CellToWorldUnprojected(Vector2Int cell)
     {
         return _origin + new Vector3(
             (cell.x + 0.5f) * _cellSize,

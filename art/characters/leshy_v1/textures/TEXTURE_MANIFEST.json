@@ -1,0 +1,374 @@
+{
+  "MAT_Leshy_Birch": {
+    "BaseColor": {
+      "master": "textures/4k/MAT_Leshy_Birch_BaseColor.png",
+      "unity": "textures/2k/MAT_Leshy_Birch_BaseColor.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Normal": {
+      "master": "textures/4k/MAT_Leshy_Birch_Normal.png",
+      "unity": "textures/2k/MAT_Leshy_Birch_Normal.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Roughness": {
+      "master": "textures/4k/MAT_Leshy_Birch_Roughness.png",
+      "unity": "textures/2k/MAT_Leshy_Birch_Roughness.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Metallic": {
+      "master": "textures/4k/MAT_Leshy_Birch_Metallic.png",
+      "unity": "textures/2k/MAT_Leshy_Birch_Metallic.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "AO": {
+      "master": "textures/4k/MAT_Leshy_Birch_AO.png",
+      "unity": "textures/2k/MAT_Leshy_Birch_AO.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    }
+  },
+  "MAT_Leshy_DarkWood": {
+    "BaseColor": {
+      "master": "textures/4k/MAT_Leshy_DarkWood_BaseColor.png",
+      "unity": "textures/2k/MAT_Leshy_DarkWood_BaseColor.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Normal": {
+      "master": "textures/4k/MAT_Leshy_DarkWood_Normal.png",
+      "unity": "textures/2k/MAT_Leshy_DarkWood_Normal.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Roughness": {
+      "master": "textures/4k/MAT_Leshy_DarkWood_Roughness.png",
+      "unity": "textures/2k/MAT_Leshy_DarkWood_Roughness.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Metallic": {
+      "master": "textures/4k/MAT_Leshy_DarkWood_Metallic.png",
+      "unity": "textures/2k/MAT_Leshy_DarkWood_Metallic.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "AO": {
+      "master": "textures/4k/MAT_Leshy_DarkWood_AO.png",
+      "unity": "textures/2k/MAT_Leshy_DarkWood_AO.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    }
+  },
+  "MAT_Leshy_Moss": {
+    "BaseColor": {
+      "master": "textures/4k/MAT_Leshy_Moss_BaseColor.png",
+      "unity": "textures/2k/MAT_Leshy_Moss_BaseColor.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Normal": {
+      "master": "textures/4k/MAT_Leshy_Moss_Normal.png",
+      "unity": "textures/2k/MAT_Leshy_Moss_Normal.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Roughness": {
+      "master": "textures/4k/MAT_Leshy_Moss_Roughness.png",
+      "unity": "textures/2k/MAT_Leshy_Moss_Roughness.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Metallic": {
+      "master": "textures/4k/MAT_Leshy_Moss_Metallic.png",
+      "unity": "textures/2k/MAT_Leshy_Moss_Metallic.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "AO": {
+      "master": "textures/4k/MAT_Leshy_Moss_AO.png",
+      "unity": "textures/2k/MAT_Leshy_Moss_AO.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    }
+  },
+  "MAT_Leshy_Copper": {
+    "BaseColor": {
+      "master": "textures/4k/MAT_Leshy_Copper_BaseColor.png",
+      "unity": "textures/2k/MAT_Leshy_Copper_BaseColor.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Normal": {
+      "master": "textures/4k/MAT_Leshy_Copper_Normal.png",
+      "unity": "textures/2k/MAT_Leshy_Copper_Normal.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Roughness": {
+      "master": "textures/4k/MAT_Leshy_Copper_Roughness.png",
+      "unity": "textures/2k/MAT_Leshy_Copper_Roughness.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Metallic": {
+      "master": "textures/4k/MAT_Leshy_Copper_Metallic.png",
+      "unity": "textures/2k/MAT_Leshy_Copper_Metallic.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "AO": {
+      "master": "textures/4k/MAT_Leshy_Copper_AO.png",
+      "unity": "textures/2k/MAT_Leshy_Copper_AO.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    }
+  },
+  "MAT_Leshy_ClothRed": {
+    "BaseColor": {
+      "master": "textures/4k/MAT_Leshy_ClothRed_BaseColor.png",
+      "unity": "textures/2k/MAT_Leshy_ClothRed_BaseColor.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Normal": {
+      "master": "textures/4k/MAT_Leshy_ClothRed_Normal.png",
+      "unity": "textures/2k/MAT_Leshy_ClothRed_Normal.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Roughness": {
+      "master": "textures/4k/MAT_Leshy_ClothRed_Roughness.png",
+      "unity": "textures/2k/MAT_Leshy_ClothRed_Roughness.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Metallic": {
+      "master": "textures/4k/MAT_Leshy_ClothRed_Metallic.png",
+      "unity": "textures/2k/MAT_Leshy_ClothRed_Metallic.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "AO": {
+      "master": "textures/4k/MAT_Leshy_ClothRed_AO.png",
+      "unity": "textures/2k/MAT_Leshy_ClothRed_AO.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    }
+  },
+  "MAT_Leshy_ClothWhite": {
+    "BaseColor": {
+      "master": "textures/4k/MAT_Leshy_ClothWhite_BaseColor.png",
+      "unity": "textures/2k/MAT_Leshy_ClothWhite_BaseColor.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Normal": {
+      "master": "textures/4k/MAT_Leshy_ClothWhite_Normal.png",
+      "unity": "textures/2k/MAT_Leshy_ClothWhite_Normal.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Roughness": {
+      "master": "textures/4k/MAT_Leshy_ClothWhite_Roughness.png",
+      "unity": "textures/2k/MAT_Leshy_ClothWhite_Roughness.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "Metallic": {
+      "master": "textures/4k/MAT_Leshy_ClothWhite_Metallic.png",
+      "unity": "textures/2k/MAT_Leshy_ClothWhite_Metallic.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    },
+    "AO": {
+      "master": "textures/4k/MAT_Leshy_ClothWhite_AO.png",
+      "unity": "textures/2k/MAT_Leshy_ClothWhite_AO.png",
+      "master_resolution": [
+        4096,
+        4096
+      ],
+      "unity_resolution": [
+        2048,
+        2048
+      ]
+    }
+  }
+}

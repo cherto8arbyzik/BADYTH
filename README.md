@@ -35,6 +35,8 @@ In Unity, open **Window > General > Test Runner**, choose **EditMode**, and run 
 
 This is a deliberately narrow technical slice, not a content-complete game. It contains:
 
+- the canonical world, story, and character bible in [`docs/ЗАСТАВА.md`](docs/ЗАСТАВА.md);
+- the production-facing character art and modular profession guide in [`docs/CHARACTER_REFERENCE_BIBLE.md`](docs/CHARACTER_REFERENCE_BIBLE.md);
 - a one-page product definition in `docs/GDD.md`;
 - architecture and replacement boundaries in `docs/ARCHITECTURE.md`;
 - separate `Town` and placeholder `Expedition` scenes;

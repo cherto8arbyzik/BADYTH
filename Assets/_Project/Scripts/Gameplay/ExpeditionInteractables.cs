@@ -117,8 +117,10 @@ public sealed class ExpeditionRewardShrine : MonoBehaviour, IExpeditionInteracta
 
     public Vector3 InteractionPosition => transform.position;
     public string Prompt => _claimed
-        ? "Дар аномалии уже забран"
-        : "E — извлечь сердце аномалии";
+        ? "Переход уже использован"
+        : _sceneController != null && _sceneController.IsFinalDungeonFloor
+            ? "E — очистить сердце подземелья"
+            : "E — спуститься на следующий этаж";
 
     public void Configure(ExpeditionSceneController sceneController)
     {
@@ -138,17 +140,8 @@ public sealed class ExpeditionRewardShrine : MonoBehaviour, IExpeditionInteracta
             return;
         }
 
-        int relics = hero.Backpack.TryAdd(ResourceType.Relic, 2);
-        int iron = hero.Backpack.TryAdd(ResourceType.OldIron, 5);
-        if (relics + iron == 0)
-        {
-            _sceneController.ShowMessage("Освободите место в рюкзаке для дара", 2f);
-            return;
-        }
-
         _claimed = true;
-        _sceneController.MarkAnomalyCompleted();
-        _sceneController.ShowMessage($"Сердце очищено: реликвии +{relics}, железо +{iron}", 3f);
+        _sceneController.ResolveDungeonGate();
     }
 
     private void OnDestroy()

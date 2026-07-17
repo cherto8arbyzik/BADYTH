@@ -133,8 +133,11 @@ public sealed class RoadPlacementController : MonoBehaviour
         {
             _currentPoint.x = Mathf.Round(_currentPoint.x / GridStep) * GridStep;
             _currentPoint.z = Mathf.Round(_currentPoint.z / GridStep) * GridStep;
-            _currentPoint.y = 0f;
-            ApplyRoadSnapping();
+            _hasGroundPoint = GroundSurface.TryProjectPoint(_currentPoint, out _currentPoint);
+            if (_hasGroundPoint)
+            {
+                ApplyRoadSnapping();
+            }
         }
         else
         {
@@ -262,7 +265,14 @@ public sealed class RoadPlacementController : MonoBehaviour
 
         if (_isSnappedToRoad)
         {
-            _currentPoint = snappedPoint;
+            if (GroundSurface.TryProjectPoint(snappedPoint, out Vector3 projectedSnap))
+            {
+                _currentPoint = projectedSnap;
+            }
+            else
+            {
+                _isSnappedToRoad = false;
+            }
         }
 
         if (_snapMarker != null)
@@ -274,12 +284,22 @@ public sealed class RoadPlacementController : MonoBehaviour
 
     private bool IsSegmentClear(Vector3 start, Vector3 end)
     {
+        Vector3 horizontalDirection = end - start;
+        horizontalDirection.y = 0f;
+        float horizontalLength = horizontalDirection.magnitude;
+        Vector3 side = horizontalLength <= 0.0001f
+            ? Vector3.right
+            : Vector3.Cross(Vector3.up, horizontalDirection / horizontalLength);
         float length = Vector3.Distance(start, end);
         int sampleCount = Mathf.Max(2, Mathf.CeilToInt(length / ValidationSampleSpacing));
         for (int index = 0; index <= sampleCount; index++)
         {
             Vector3 sample = Vector3.Lerp(start, end, index / (float)sampleCount);
-            if (!HasGroundAt(sample) || HasBlockingCollider(sample))
+            if (!GroundSurface.TryProjectPoint(sample, out Vector3 projected, out Vector3 normal) ||
+                Vector3.Angle(normal, Vector3.up) > 35f ||
+                !HasGroundAt(projected - side * RoadWidth * 0.5f) ||
+                !HasGroundAt(projected + side * RoadWidth * 0.5f) ||
+                HasBlockingCollider(projected))
             {
                 return false;
             }
@@ -290,23 +310,8 @@ public sealed class RoadPlacementController : MonoBehaviour
 
     private bool HasGroundAt(Vector3 point)
     {
-        int hitCount = Physics.RaycastNonAlloc(
-            new Ray(point + Vector3.up * 4f, Vector3.down),
-            _raycastHits,
-            8f,
-            ~0,
-            QueryTriggerInteraction.Ignore);
-
-        for (int index = 0; index < hitCount; index++)
-        {
-            RaycastHit hit = _raycastHits[index];
-            if (hit.collider.GetComponentInParent<GroundSurface>() != null)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return GroundSurface.TryProjectPoint(point, out _, out Vector3 normal) &&
+               Vector3.Angle(normal, Vector3.up) <= 35f;
     }
 
     private bool HasBlockingCollider(Vector3 point)
@@ -556,15 +561,26 @@ public sealed class RoadPlacementController : MonoBehaviour
         const int segmentCount = 28;
         Vector3[] vertices = new Vector3[segmentCount + 1];
         int[] triangles = new int[segmentCount * 3];
+        if (GroundSurface.TryProjectPoint(center, out Vector3 projectedCenter))
+        {
+            center = projectedCenter;
+        }
+
         vertices[0] = center + Vector3.up * height;
 
         for (int index = 0; index < segmentCount; index++)
         {
             float angle = index * Mathf.PI * 2f / segmentCount;
-            vertices[index + 1] = center + new Vector3(
+            Vector3 perimeter = center + new Vector3(
                 Mathf.Cos(angle) * radius,
-                height,
+                0f,
                 Mathf.Sin(angle) * radius);
+            if (GroundSurface.TryProjectPoint(perimeter, out Vector3 projectedPerimeter))
+            {
+                perimeter = projectedPerimeter;
+            }
+
+            vertices[index + 1] = perimeter + Vector3.up * height;
 
             int triangle = index * 3;
             triangles[triangle] = 0;
@@ -636,30 +652,84 @@ public sealed class RoadPlacementController : MonoBehaviour
 
     private static void UpdateRibbon(Mesh mesh, Vector3 start, Vector3 end, float width, float height)
     {
-        Vector3 direction = end - start;
-        direction.y = 0f;
-        Vector3 side = direction.sqrMagnitude <= 0.0001f
-            ? Vector3.right
-            : Vector3.Cross(Vector3.up, direction.normalized);
-        side *= width * 0.5f;
-        Vector3 lift = Vector3.up * height;
+        Vector3 horizontal = end - start;
+        horizontal.y = 0f;
+        int segmentCount = Mathf.Max(
+            1,
+            Mathf.CeilToInt(horizontal.magnitude / ValidationSampleSpacing));
+        int rowCount = segmentCount + 1;
+        Vector3[] centers = new Vector3[rowCount];
+        Vector3[] vertices = new Vector3[rowCount * 2];
+        Vector2[] uvs = new Vector2[vertices.Length];
+        int[] triangles = new int[segmentCount * 6];
+        float travelled = 0f;
+
+        for (int row = 0; row < rowCount; row++)
+        {
+            Vector3 center = Vector3.Lerp(start, end, row / (float)segmentCount);
+            if (GroundSurface.TryProjectPoint(center, out Vector3 projected))
+            {
+                center = projected;
+            }
+
+            centers[row] = center;
+        }
+
+        for (int row = 0; row < rowCount; row++)
+        {
+            Vector3 tangent = row == 0
+                ? centers[1] - centers[0]
+                : row == rowCount - 1
+                    ? centers[row] - centers[row - 1]
+                    : centers[row + 1] - centers[row - 1];
+            tangent.y = 0f;
+            Vector3 side = tangent.sqrMagnitude <= 0.0001f
+                ? Vector3.right
+                : Vector3.Cross(Vector3.up, tangent.normalized);
+            side *= width * 0.5f;
+
+            Vector3 left = centers[row] - side;
+            Vector3 right = centers[row] + side;
+            if (GroundSurface.TryProjectPoint(left, out Vector3 projectedLeft))
+            {
+                left = projectedLeft;
+            }
+
+            if (GroundSurface.TryProjectPoint(right, out Vector3 projectedRight))
+            {
+                right = projectedRight;
+            }
+
+            if (row > 0)
+            {
+                travelled += Vector3.Distance(centers[row - 1], centers[row]);
+            }
+
+            int vertex = row * 2;
+            vertices[vertex] = left + Vector3.up * height;
+            vertices[vertex + 1] = right + Vector3.up * height;
+            float uvY = travelled / Mathf.Max(0.1f, width);
+            uvs[vertex] = new Vector2(0f, uvY);
+            uvs[vertex + 1] = new Vector2(1f, uvY);
+
+            if (row >= segmentCount)
+            {
+                continue;
+            }
+
+            int triangle = row * 6;
+            triangles[triangle] = vertex;
+            triangles[triangle + 1] = vertex + 2;
+            triangles[triangle + 2] = vertex + 1;
+            triangles[triangle + 3] = vertex + 1;
+            triangles[triangle + 4] = vertex + 2;
+            triangles[triangle + 5] = vertex + 3;
+        }
 
         mesh.Clear();
-        mesh.vertices = new[]
-        {
-            start - side + lift,
-            start + side + lift,
-            end - side + lift,
-            end + side + lift
-        };
-        mesh.triangles = new[] { 0, 2, 1, 1, 2, 3 };
-        mesh.uv = new[]
-        {
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(0f, direction.magnitude / Mathf.Max(0.1f, width)),
-            new Vector2(1f, direction.magnitude / Mathf.Max(0.1f, width))
-        };
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.uv = uvs;
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
     }

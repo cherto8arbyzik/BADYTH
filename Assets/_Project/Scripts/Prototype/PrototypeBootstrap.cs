@@ -13,8 +13,8 @@ namespace Hollowwest.Prototype
 
 public sealed class PrototypeBootstrap : MonoBehaviour
 {
-    private const float WorldWidth = 340f;
-    private const float WorldDepth = 240f;
+    private const float WorldWidth = 310f;
+    private const float WorldDepth = 280f;
     private const float NavigationCellSize = 0.75f;
     private const float IslandCornerCutX = 52f;
     private const float IslandCornerCutZ = 38f;
@@ -159,7 +159,7 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         Bounds playBounds = new(Vector3.zero, new Vector3(WorldWidth, 1f, WorldDepth));
         RoadNetwork roadNetwork = new();
         roadNetwork.RegisterPolyline(MainRoadPoints, 3.2f);
-        CreateGround(groundMaterial, groundEdgeMaterial, dirtMaterial);
+        CreateGround(groundMaterial);
         Camera worldCamera = CreateCamera(playBounds);
         CreateLighting(out Light sunlight, out Light fillLight);
 
@@ -167,20 +167,12 @@ public sealed class PrototypeBootstrap : MonoBehaviour
             new Vector3(playBounds.min.x, 0f, playBounds.min.z),
             Mathf.CeilToInt(playBounds.size.x / NavigationCellSize),
             Mathf.CeilToInt(playBounds.size.z / NavigationCellSize),
-            NavigationCellSize);
+            NavigationCellSize,
+            point => GroundSurface.TryProjectPoint(point, out Vector3 projected)
+                ? projected
+                : point);
 
         BlockOutsideIsland(navigation);
-        CreateLakes(dirtMaterial, stoneMaterial, navigation);
-
-        CreateVillage(
-            navigation,
-            woodMaterial,
-            burnedWoodMaterial,
-            ashMaterial,
-            foliageMaterial,
-            foliageLightMaterial,
-            stoneMaterial);
-        CreateLandscapeRelief(navigation);
         CreateWildlife(navigation);
 
         CampCore campCore = CreateCampCore();
@@ -190,7 +182,6 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         CreateResourceNode(new Vector3(-52f, 0f, -35f), woodMaterial, lightWoodMaterial, navigation);
         CreateResourceNode(new Vector3(5f, 0f, 38f), woodMaterial, lightWoodMaterial, navigation);
         CreateResourceDeposit("Разбираемый каменный завал", ResourceType.Stone, new Vector3(-64f, 0f, 26f), new Vector3(4.5f, 2.1f, 3.6f), stoneMaterial, 110, 5, navigation);
-        CreateResourceDeposit("Разбираемые руины", ResourceType.Stone, new Vector3(58f, 0f, -38f), new Vector3(5.2f, 1.8f, 4.2f), ashMaterial, 95, 5, navigation);
         CreateResourceDeposit("Глиняная жила", ResourceType.Clay, Lakes[0].Center + new Vector3(-17f, 0f, -4f), new Vector3(4.8f, 0.8f, 3.8f), dirtMaterial, 130, 4, navigation);
         CreateResourceDeposit("Глиняная жила", ResourceType.Clay, Lakes[1].Center + new Vector3(10f, 0f, 3f), new Vector3(3.8f, 0.7f, 3.2f), dirtMaterial, 90, 4, navigation);
         CreateResourceDeposit("Лечебные травы", ResourceType.Herb, new Vector3(34f, 0f, 52f), new Vector3(2.8f, 1.2f, 2.8f), foliageLightMaterial, 65, 3, navigation, false);
@@ -246,6 +237,7 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         IReadOnlyList<BuildingDefinition> buildingCatalog = BuildingCatalog.CreatePrototypeCatalog();
         ExpeditionSystem expedition = gameObject.AddComponent<ExpeditionSystem>();
         expedition.Initialize(stockpile, settlement, 20f);
+        CreateExpeditionEntrance(hero.transform, expedition, woodMaterial, accentMaterial);
         int rescuedResidentIndex = 0;
         expedition.ResidentsRescued += rescuedCount =>
         {
@@ -283,23 +275,95 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         hud.Initialize(selection, stockpile, session, placement, roadPlacement, gathering, buildingCatalog, settlement, economy, expedition);
     }
 
-    private void CreateGround(
-        Material groundMaterial,
-        Material edgeMaterial,
-        Material dirtMaterial)
+    private void CreateExpeditionEntrance(
+        Transform hero,
+        ExpeditionSystem expedition,
+        Material woodMaterial,
+        Material accentMaterial)
+    {
+        Vector3 entrancePosition = new(-16f, 0.05f, -113f);
+        entrancePosition = ProjectToGround(entrancePosition, 0.05f);
+        GameObject entrance = new("Rope Ladder To Outer Islands");
+        entrance.transform.SetParent(transform);
+        entrance.transform.position = entrancePosition;
+
+        Material ropeMaterial = new(woodMaterial) { hideFlags = HideFlags.DontSave };
+        for (int side = -1; side <= 1; side += 2)
+        {
+            CreateVisualPrimitive(
+                entrance.transform,
+                "Rope",
+                PrimitiveType.Cylinder,
+                new Vector3(side * 0.58f, -2.7f, -0.30f),
+                new Vector3(0.09f, 3.1f, 0.09f),
+                Quaternion.identity,
+                ropeMaterial,
+                false,
+                true);
+        }
+
+        for (int rung = 0; rung < 8; rung++)
+        {
+            CreateVisualPrimitive(
+                entrance.transform,
+                "Ladder Rung",
+                PrimitiveType.Cube,
+                new Vector3(0f, -0.15f - rung * 0.72f, -0.30f),
+                new Vector3(1.35f, 0.10f, 0.16f),
+                Quaternion.identity,
+                ropeMaterial,
+                false,
+                true);
+        }
+
+        GameObject marker = CreateVisualPrimitive(
+            entrance.transform,
+            "Entrance Marker",
+            PrimitiveType.Cylinder,
+            new Vector3(0f, 0.04f, 1.2f),
+            new Vector3(2.1f, 0.035f, 2.1f),
+            Quaternion.identity,
+            new Material(accentMaterial) { hideFlags = HideFlags.DontSave },
+            false,
+            true);
+        marker.GetComponent<Renderer>().sharedMaterial.color = new Color(0.88f, 0.65f, 0.22f, 0.72f);
+
+        GameObject labelObject = new("Expedition Entrance Label");
+        labelObject.transform.SetParent(entrance.transform, false);
+        labelObject.transform.localPosition = new Vector3(0f, 2.6f, 0.8f);
+        TextMesh label = labelObject.AddComponent<TextMesh>();
+        label.text = "СПУСК НА ВНЕШНИЕ ОСТРОВА";
+        label.fontSize = 38;
+        label.characterSize = 0.075f;
+        label.anchor = TextAnchor.MiddleCenter;
+        label.alignment = TextAlignment.Center;
+        label.color = new Color(1f, 0.88f, 0.55f);
+
+        entrance.AddComponent<ExpeditionEntrance>().Initialize(hero, expedition, label);
+    }
+
+    private void CreateGround(Material groundMaterial)
+    {
+        if (!StartingIsland3VisualFactory.TryCreate(transform, out GameObject visualRoot))
+        {
+            Debug.LogError("Starting map 3.0 visual could not be loaded.");
+            CreateFallbackGround(groundMaterial);
+            return;
+        }
+
+        if (!StartingMap3GroundFactory.TryCreate(visualRoot.transform, out _))
+        {
+            Debug.LogError("Starting map 3.0 gameplay collision could not be loaded.");
+            CreateFallbackGround(groundMaterial);
+        }
+    }
+
+    private void CreateFallbackGround(Material groundMaterial)
     {
         GameObject ground = CreateIslandTop(groundMaterial);
         ground.transform.SetParent(transform);
         ground.AddComponent<GroundSurface>();
-
-        CreateIslandUnderside(edgeMaterial);
-        CreateCloudLayer();
-
-        CreateStreetPolyline(MainRoadPoints, 3.2f, edgeMaterial, dirtMaterial);
-
-        CreateFertilityPatches(groundMaterial, dirtMaterial);
-
-        CreateGrassField();
+        ground.GetComponent<MeshRenderer>().enabled = false;
     }
 
     private static GameObject CreateIslandTop(Material groundMaterial)
@@ -459,13 +523,17 @@ public sealed class PrototypeBootstrap : MonoBehaviour
 
     private static void BlockOutsideIsland(GridNavigationService navigation)
     {
+        StartingMap3NavigationFootprint.TryLoad(out StartingMap3NavigationFootprint footprint);
         for (int x = 0; x < navigation.Width; x++)
         {
             for (int y = 0; y < navigation.Depth; y++)
             {
                 Vector2Int cell = new(x, y);
-                Vector3 world = navigation.CellToWorld(cell);
-                if (!IsInsideIslandSurface(world.x, world.z, 0.8f))
+                Vector3 world = navigation.CellToWorldUnprojected(cell);
+                bool inside = footprint != null
+                    ? footprint.Contains(world, 0.8f)
+                    : IsInsideIslandSurface(world.x, world.z, 0.8f);
+                if (!inside)
                 {
                     navigation.SetCellBlocked(cell);
                 }
@@ -1059,18 +1127,22 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         Material ashMaterial,
         Material foliageMaterial,
         Material foliageLightMaterial,
-        Material stoneMaterial)
+        Material stoneMaterial,
+        bool includeEnvironment)
     {
         GameObject village = new("Zastava Settlement");
         village.transform.SetParent(transform);
 
         CreateImportedBuilding(village.transform, "Hero's Town Hall", "Inn", TownHallPosition, 158f, 9.0f, false, 0, burnedWoodMaterial, ashMaterial, navigation);
-        CreateImportedBuilding(village.transform, "Collapsed Chapel", "House_3", new Vector3(-34f, 0f, 8f), 132f, 7.2f, true, 0, burnedWoodMaterial, ashMaterial, navigation);
-        CreateImportedBuilding(village.transform, "Burned Workshop", "Blacksmith", new Vector3(12f, 0f, -24f), -28f, 6.6f, true, 0, burnedWoodMaterial, ashMaterial, navigation);
-        CreateImportedBuilding(village.transform, "Old Gate Remnant", "Stable", new Vector3(13f, 0f, 20f), -118f, 7.6f, true, 0, burnedWoodMaterial, ashMaterial, navigation);
 
-        CreateVillageTrees(village.transform, woodMaterial, foliageMaterial, foliageLightMaterial, stoneMaterial, navigation);
-        CreateRuinsProps(village.transform, navigation);
+        if (includeEnvironment)
+        {
+            CreateImportedBuilding(village.transform, "Collapsed Chapel", "House_3", new Vector3(-34f, 0f, 8f), 132f, 7.2f, true, 0, burnedWoodMaterial, ashMaterial, navigation);
+            CreateImportedBuilding(village.transform, "Burned Workshop", "Blacksmith", new Vector3(12f, 0f, -24f), -28f, 6.6f, true, 0, burnedWoodMaterial, ashMaterial, navigation);
+            CreateImportedBuilding(village.transform, "Old Gate Remnant", "Stable", new Vector3(13f, 0f, 20f), -118f, 7.6f, true, 0, burnedWoodMaterial, ashMaterial, navigation);
+            CreateVillageTrees(village.transform, woodMaterial, foliageMaterial, foliageLightMaterial, stoneMaterial, navigation);
+            CreateRuinsProps(village.transform, navigation);
+        }
     }
 
     private void CreateImportedBuilding(
@@ -2014,7 +2086,7 @@ public sealed class PrototypeBootstrap : MonoBehaviour
     {
         GameObject core = new("Town Hall Core");
         core.transform.SetParent(transform);
-        core.transform.position = TownHallPosition;
+        core.transform.position = ProjectToGround(TownHallPosition);
         return core.AddComponent<CampCore>();
     }
 
@@ -2026,7 +2098,7 @@ public sealed class PrototypeBootstrap : MonoBehaviour
     {
         GameObject resource = new("Wood Cache");
         resource.transform.SetParent(transform);
-        resource.transform.position = position;
+        resource.transform.position = ProjectToGround(position);
         Material resourceBark = new(barkMaterial)
         {
             hideFlags = HideFlags.DontSave
@@ -2065,7 +2137,7 @@ public sealed class PrototypeBootstrap : MonoBehaviour
     {
         GameObject resource = new(displayName);
         resource.transform.SetParent(transform);
-        resource.transform.position = position;
+        resource.transform.position = ProjectToGround(position);
 
         PrimitiveType primitive = resourceType == ResourceType.Clay ? PrimitiveType.Cylinder : PrimitiveType.Sphere;
         CreateVisualPrimitive(
@@ -2108,7 +2180,8 @@ public sealed class PrototypeBootstrap : MonoBehaviour
     {
         GameObject hero = new("Main Hero");
         hero.transform.SetParent(transform);
-        hero.transform.position = TownHallPosition + new Vector3(4f, 0f, -2f);
+        hero.transform.position = ProjectToGround(
+            TownHallPosition + new Vector3(4f, 0f, -2f));
 
         CapsuleCollider bodyCollider = hero.AddComponent<CapsuleCollider>();
         bodyCollider.center = new Vector3(0f, 0.84f, 0f);
@@ -2156,7 +2229,8 @@ public sealed class PrototypeBootstrap : MonoBehaviour
     {
         GameObject resident = new(name);
         resident.transform.SetParent(transform);
-        resident.transform.position = position;
+        resident.transform.position = ProjectToGround(position);
+        home = ProjectToGround(home);
 
         CapsuleCollider collider = resident.AddComponent<CapsuleCollider>();
         collider.center = new Vector3(0f, 0.77f, 0f);
@@ -2181,6 +2255,13 @@ public sealed class PrototypeBootstrap : MonoBehaviour
         TownResident behaviour = resident.AddComponent<TownResident>();
         behaviour.Initialize(agent, home, wanderRadius, seed);
         resident.AddComponent<NpcDialogue>().ConfigureDefault(name, seed);
+    }
+
+    private static Vector3 ProjectToGround(Vector3 position, float verticalOffset = 0f)
+    {
+        return GroundSurface.TryProjectPoint(position, out Vector3 projected, verticalOffset)
+            ? projected
+            : position;
     }
 
     private static GameObject CreateVisualPrimitive(

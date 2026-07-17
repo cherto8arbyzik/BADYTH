@@ -196,6 +196,18 @@ public sealed class BuildingPlacementController : MonoBehaviour
         if (_gridSnappingEnabled)
         {
             groundPoint = PlacementGridOverlay.Snap(groundPoint, GridStep);
+        }
+
+        if (!GroundSurface.TryProjectPoint(groundPoint, out groundPoint))
+        {
+            _hasGround = false;
+            _preview.SetActive(false);
+            _gridOverlay?.Hide();
+            return;
+        }
+
+        if (_gridSnappingEnabled)
+        {
             _gridOverlay?.ShowAt(groundPoint);
         }
         else
@@ -203,7 +215,19 @@ public sealed class BuildingPlacementController : MonoBehaviour
             _gridOverlay?.Hide();
         }
 
-        groundPoint.y = 0.02f;
+        if (GroundSurface.TryProjectFootprint(
+                groundPoint,
+                Quaternion.Euler(0f, _yaw, 0f),
+                new Vector2(
+                    _activeDefinition.Footprint * 0.43f,
+                    _activeDefinition.Footprint * 0.37f),
+                0.9f,
+                out Vector3 foundationCenter))
+        {
+            groundPoint.y = foundationCenter.y;
+        }
+
+        groundPoint.y += 0.02f;
         _preview.SetActive(true);
         _preview.transform.position = groundPoint;
         _preview.transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
@@ -224,6 +248,17 @@ public sealed class BuildingPlacementController : MonoBehaviour
         if (!BuildingPlacementRules.IsInsideBounds(_worldBounds, position, _activeDefinition.Footprint))
         {
             _validationMessage = "Слишком близко к краю поселения";
+        }
+        else if (!GroundSurface.TryProjectFootprint(
+                     position,
+                     Quaternion.Euler(0f, _yaw, 0f),
+                     new Vector2(
+                         _activeDefinition.Footprint * 0.43f,
+                         _activeDefinition.Footprint * 0.37f),
+                     0.9f,
+                     out _))
+        {
+            _validationMessage = "Нужна достаточно ровная площадка целиком на острове";
         }
         else if (!_settlement.IsBuildingUnlocked(_activeDefinition))
         {
@@ -364,6 +399,20 @@ public sealed class BuildingPlacementController : MonoBehaviour
 
     private void PlaceActiveBuilding()
     {
+        Vector3 position = _preview.transform.position;
+        if (!GroundSurface.TryProjectFootprint(
+                position,
+                Quaternion.Euler(0f, _yaw, 0f),
+                new Vector2(
+                    _activeDefinition.Footprint * 0.43f,
+                    _activeDefinition.Footprint * 0.37f),
+                0.9f,
+                out position))
+        {
+            UpdateValidation();
+            return;
+        }
+
         if (!_settlement.IsBuildingUnlocked(_activeDefinition) ||
             !_stockpile.TrySpend(_activeDefinition.ConstructionCosts))
         {
@@ -371,8 +420,6 @@ public sealed class BuildingPlacementController : MonoBehaviour
             return;
         }
 
-        Vector3 position = _preview.transform.position;
-        position.y = 0f;
         TownConstructionFactory.CreateConstructionSite(
             _activeDefinition,
             _buildingsRoot,

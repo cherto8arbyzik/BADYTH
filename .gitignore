@@ -9,6 +9,12 @@
 [Mm]emoryCaptures/
 [Rr]ecordings/
 
+# Root-level Unity batch/test artifacts
+/*[Ee]dit[Mm]ode[Rr]esults*.xml
+/*[Pp]lay[Mm]ode[Rr]esults*.xml
+/*[Tt]est[Rr]esults*.xml
+/Unity-*.log
+
 # IDE files
 .vs/
 .vscode/

@@ -12,14 +12,14 @@ public sealed class ExpeditionBackpackTests
     [Test]
     public void Backpack_EnforcesSlotsAndStackCaps()
     {
-        ExpeditionBackpack backpack = new(2, 5);
+        ExpeditionBackpack backpack = new(2, 1, 5);
 
-        Assert.That(backpack.TryAdd(ResourceType.Timber, 8), Is.EqualTo(5));
-        Assert.That(backpack.TryAdd(ResourceType.Stone, 3), Is.EqualTo(3));
+        Assert.That(backpack.TryAdd(ResourceType.Timber, 8), Is.EqualTo(8));
+        Assert.That(backpack.TryAdd(ResourceType.Stone, 3), Is.Zero);
         Assert.That(backpack.TryAdd(ResourceType.Food, 1), Is.Zero);
-        Assert.That(backpack.TryAdd(ResourceType.Stone, 4), Is.EqualTo(2));
-        Assert.That(backpack.Get(ResourceType.Timber), Is.EqualTo(5));
-        Assert.That(backpack.Get(ResourceType.Stone), Is.EqualTo(5));
+        Assert.That(backpack.TryAdd(ResourceType.Timber, 4), Is.EqualTo(2));
+        Assert.That(backpack.Get(ResourceType.Timber), Is.EqualTo(10));
+        Assert.That(backpack.Get(ResourceType.Stone), Is.Zero);
         Assert.That(backpack.SlotsUsed, Is.EqualTo(2));
         Assert.That(backpack.IsFull, Is.True);
     }
@@ -27,7 +27,7 @@ public sealed class ExpeditionBackpackTests
     [Test]
     public void Backpack_LoseHalfRoundsDownAndRemovesEmptyStacks()
     {
-        ExpeditionBackpack backpack = new(4, 10);
+        ExpeditionBackpack backpack = new(2, 2, 10);
         backpack.TryAdd(ResourceType.Timber, 9);
         backpack.TryAdd(ResourceType.Stone, 1);
         backpack.TryAdd(ResourceType.Herb, 6);
@@ -38,6 +38,19 @@ public sealed class ExpeditionBackpackTests
         Assert.That(backpack.Get(ResourceType.Stone), Is.Zero);
         Assert.That(backpack.Get(ResourceType.Herb), Is.EqualTo(3));
         Assert.That(backpack.SlotsUsed, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void Backpack_UsesVisibleGridCoordinatesAndMultipleStacks()
+    {
+        ExpeditionBackpack backpack = new(2, 2, 3);
+
+        Assert.That(backpack.TryAdd(ResourceType.Timber, 7), Is.EqualTo(7));
+        Assert.That(backpack.SlotsUsed, Is.EqualTo(3));
+        Assert.That(backpack.Slots[0].X, Is.EqualTo(0));
+        Assert.That(backpack.Slots[0].Y, Is.EqualTo(0));
+        Assert.That(backpack.Slots[2].X, Is.EqualTo(0));
+        Assert.That(backpack.Slots[2].Y, Is.EqualTo(1));
     }
 
     [Test]

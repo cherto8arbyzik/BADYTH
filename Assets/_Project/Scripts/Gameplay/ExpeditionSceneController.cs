@@ -28,6 +28,8 @@ public sealed class ExpeditionSceneController : MonoBehaviour
     private Material _bushMaterial;
     private Material _ruinStoneMaterial;
     private Material _ruinWoodMaterial;
+    private Transform _dungeonFloorRoot;
+    private System.Random _lootRandom;
     private Vector3 _mainReturnPosition;
     private float _messageTime;
     private string _message = string.Empty;
@@ -36,6 +38,9 @@ public sealed class ExpeditionSceneController : MonoBehaviour
     public bool IsInAnomaly { get; private set; }
     public bool AnomalyCompleted { get; private set; }
     public int EnemiesRemaining { get; private set; }
+    public int DungeonFloor { get; private set; }
+    public int DungeonFloorCount { get; private set; }
+    public bool IsFinalDungeonFloor => DungeonFloor > 0 && DungeonFloor == DungeonFloorCount;
     public string Message => _messageTime > 0f ? _message : string.Empty;
     public string CurrentPrompt { get; private set; } = string.Empty;
     public ExpeditionBackpack Backpack => _backpack;
@@ -44,7 +49,9 @@ public sealed class ExpeditionSceneController : MonoBehaviour
     public void Initialize(ExpeditionTravelService travelService, int seed)
     {
         _travelService = travelService;
-        _backpack = new ExpeditionBackpack(8, 10);
+        _backpack = new ExpeditionBackpack(8, 5, 10);
+        _lootRandom = new System.Random(seed ^ 0x5f3759df);
+        DungeonFloorCount = new DungeonRunPlan(seed).FloorCount;
         BuildWorld(seed);
     }
 
@@ -83,11 +90,16 @@ public sealed class ExpeditionSceneController : MonoBehaviour
             return;
         }
 
+        if (DungeonFloor == 0)
+        {
+            BuildDungeonFloor(1);
+        }
+
         IsInAnomaly = true;
         hero.SetMovementBounds(_anomalyCenter, _anomalyRadii - Vector2.one * 2f);
         hero.Teleport(_anomalyCenter + new Vector3(0f, 0.05f, -14f));
         _cameraController.Snap();
-        ShowMessage("Вы вошли в аномалию. Победите тварей или отступите через разлом.", 4f);
+        ShowMessage($"Подземелье: этаж {DungeonFloor}/{DungeonFloorCount}. Очистите зал и найдите спуск.", 4f);
     }
 
     public void LeaveAnomaly(ExpeditionHeroController hero)
@@ -127,18 +139,60 @@ public sealed class ExpeditionSceneController : MonoBehaviour
         RequestReturnHome(true);
     }
 
-    public void NotifyEnemyDefeated(ExpeditionEnemy enemy)
+    public void NotifyEnemyDefeated(
+        ExpeditionEnemy enemy,
+        bool countsForDungeon,
+        ResourceType lootType,
+        int lootAmount,
+        Vector3 position)
     {
-        if (enemy != null)
+        SpawnLoot(lootType, lootAmount, position + Vector3.up * 0.3f);
+        if (countsForDungeon && enemy != null)
         {
             _enemies.Remove(enemy);
         }
 
         EnemiesRemaining = Mathf.Max(0, _enemies.Count);
-        if (EnemiesRemaining == 0)
+        if (countsForDungeon && EnemiesRemaining == 0)
         {
-            ShowMessage("Аномалия затихла. Теперь можно забрать её сердце.", 3.5f);
+            ShowMessage(IsFinalDungeonFloor
+                ? "Этаж очищен. Откройте последний тайник."
+                : "Этаж очищен. Спуск дальше открыт.", 3.5f);
         }
+    }
+
+    public void OpenChest(Vector3 position, int floor)
+    {
+        int iron = 2 + Mathf.Max(1, floor);
+        SpawnLoot(ResourceType.OldIron, iron, position);
+        SpawnLoot(floor % 2 == 0 ? ResourceType.Herb : ResourceType.Food, 2 + floor / 2, position);
+        if (floor == DungeonFloorCount || _lootRandom.NextDouble() > 0.58)
+        {
+            SpawnLoot(ResourceType.Relic, 1, position);
+        }
+
+        ShowMessage("Сундук открыт — добыча выпала на землю", 2.2f);
+    }
+
+    public void ResolveDungeonGate()
+    {
+        if (EnemiesRemaining > 0)
+        {
+            return;
+        }
+
+        if (IsFinalDungeonFloor)
+        {
+            SpawnLoot(ResourceType.Relic, 2, _anomalyCenter + new Vector3(0f, 0.8f, 11.5f));
+            SpawnLoot(ResourceType.SkyGlass, 1, _anomalyCenter + new Vector3(0f, 0.8f, 11.5f));
+            MarkAnomalyCompleted();
+            ShowMessage("Последний этаж очищен. Заберите добычу и возвращайтесь.", 4f);
+            return;
+        }
+
+        BuildDungeonFloor(DungeonFloor + 1);
+        _hero.Teleport(_anomalyCenter + new Vector3(0f, 0.05f, -13f));
+        _cameraController.Snap();
     }
 
     public void MarkAnomalyCompleted()
@@ -243,14 +297,16 @@ public sealed class ExpeditionSceneController : MonoBehaviour
         _cameraController.Initialize(_hero.transform);
 
         System.Random random = new(seed);
+        CreateExplorationTrail();
         CreateBiomeProps(random);
         CreateGatherables(random);
+        CreateSurfaceThreats();
         CreateMainPortals();
         CreateAnomalyArena();
 
         _hud = gameObject.AddComponent<ExpeditionHud>();
         _hud.Initialize(this);
-        ShowMessage("Внешний остров: собирайте добычу, вернитесь к челну или рискните войти в аномалию.", 5f);
+        ShowMessage($"Внешний остров: разведайте ориентиры и найдите вход в подземелье на {DungeonFloorCount} этажей.", 5f);
     }
 
     private Camera CreateCamera()
@@ -279,14 +335,34 @@ public sealed class ExpeditionSceneController : MonoBehaviour
         hero.transform.position = new Vector3(0f, 0.05f, -20f);
         StylizedCharacterBuilder.BuildHuman(hero.transform, cloth, skin, hair, accent, true, 0);
 
-        GameObject weapon = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        weapon.name = "Expedition Axe";
-        weapon.transform.SetParent(hero.transform, false);
-        weapon.transform.localPosition = new Vector3(0.48f, 1.0f, 0.18f);
-        weapon.transform.localRotation = Quaternion.Euler(0f, 0f, -22f);
-        weapon.transform.localScale = new Vector3(0.10f, 0.72f, 0.14f);
-        weapon.GetComponent<Renderer>().sharedMaterial = accent;
-        DisableCollider(weapon);
+        Transform weaponPivot = new GameObject("Sword Pivot").transform;
+        weaponPivot.SetParent(hero.transform, false);
+        weaponPivot.localPosition = new Vector3(0.48f, 1.02f, 0.18f);
+        weaponPivot.localRotation = Quaternion.Euler(12f, 0f, -18f);
+
+        GameObject handle = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        handle.name = "Sword Handle";
+        handle.transform.SetParent(weaponPivot, false);
+        handle.transform.localPosition = new Vector3(0f, 0.18f, 0f);
+        handle.transform.localScale = new Vector3(0.09f, 0.22f, 0.09f);
+        handle.GetComponent<Renderer>().sharedMaterial = hair;
+        DisableCollider(handle);
+
+        GameObject guard = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        guard.name = "Sword Guard";
+        guard.transform.SetParent(weaponPivot, false);
+        guard.transform.localPosition = new Vector3(0f, 0.42f, 0f);
+        guard.transform.localScale = new Vector3(0.48f, 0.08f, 0.11f);
+        guard.GetComponent<Renderer>().sharedMaterial = accent;
+        DisableCollider(guard);
+
+        GameObject blade = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        blade.name = "Starter Sword Blade";
+        blade.transform.SetParent(weaponPivot, false);
+        blade.transform.localPosition = new Vector3(0f, 0.93f, 0f);
+        blade.transform.localScale = new Vector3(0.13f, 1.0f, 0.07f);
+        blade.GetComponent<Renderer>().sharedMaterial = CreateMaterial(new Color(0.62f, 0.70f, 0.74f));
+        DisableCollider(blade);
 
         CharacterController character = hero.AddComponent<CharacterController>();
         character.center = new Vector3(0f, 0.95f, 0f);
@@ -295,7 +371,7 @@ public sealed class ExpeditionSceneController : MonoBehaviour
         character.stepOffset = 0.25f;
 
         ExpeditionHeroController controller = hero.AddComponent<ExpeditionHeroController>();
-        controller.Initialize(camera, this, _backpack, _mainIslandCenter, _mainIslandRadii - Vector2.one * 2.5f);
+        controller.Initialize(camera, this, _backpack, _mainIslandCenter, _mainIslandRadii - Vector2.one * 2.5f, weaponPivot);
         return controller;
     }
 
@@ -324,30 +400,45 @@ public sealed class ExpeditionSceneController : MonoBehaviour
     {
         Transform natureRoot = new GameObject("Seeded Biome Props").transform;
         natureRoot.SetParent(transform);
-        for (int index = 0; index < 52; index++)
+        Vector3[] groveCenters =
         {
-            Vector3 position = RandomPoint(random, _mainIslandCenter, _mainIslandRadii, 0.74f);
-            if (position.z < -13f || Vector3.Distance(position, new Vector3(24f, 0f, 10f)) < 7f)
+            new(-32f, 0f, 15f),
+            new(7f, 0f, 25f),
+            new(38f, 0f, -10f)
+        };
+        int[] treeCounts = { 16, 13, 12 };
+        for (int grove = 0; grove < groveCenters.Length; grove++)
+        {
+            for (int index = 0; index < treeCounts[grove]; index++)
             {
-                continue;
+                Vector3 position = RandomClusterPoint(random, groveCenters[grove], new Vector2(10f, 8f));
+                string model = index % 3 == 0 ? "BirchTree_3" : "BirchTree_1";
+                CreateImportedProp(natureRoot, NaturePath + model, position, NextFloat(random, 0f, 360f), NextFloat(random, 4.8f, 7.2f));
             }
-
-            string model = index % 3 == 0 ? "BirchTree_3" : "BirchTree_1";
-            CreateImportedProp(natureRoot, NaturePath + model, position, NextFloat(random, 0f, 360f), NextFloat(random, 4.8f, 7.2f));
         }
 
-        for (int index = 0; index < 34; index++)
+        for (int grove = 0; grove < groveCenters.Length; grove++)
         {
-            Vector3 position = RandomPoint(random, _mainIslandCenter, _mainIslandRadii, 0.78f);
-            string model = index % 2 == 0 ? "Bush" : "Bush_Large";
-            CreateImportedProp(natureRoot, NaturePath + model, position, NextFloat(random, 0f, 360f), NextFloat(random, 0.9f, 1.8f));
+            for (int index = 0; index < 8; index++)
+            {
+                Vector3 position = RandomClusterPoint(random, groveCenters[grove], new Vector2(13f, 10f));
+                string model = index % 2 == 0 ? "Bush" : "Bush_Large";
+                CreateImportedProp(natureRoot, NaturePath + model, position, NextFloat(random, 0f, 360f), NextFloat(random, 0.9f, 1.8f));
+            }
         }
 
-        string[] ruins = { "Wall_Broken", "Wall_ArchRound_Broken", "Bricks", "DeadTree_1", "Crate" };
-        for (int index = 0; index < 12; index++)
+        (string Model, Vector3 Position, float Yaw, float Height)[] ruinSite =
         {
-            Vector3 position = RandomPoint(random, _mainIslandCenter, _mainIslandRadii, 0.64f);
-            CreateImportedProp(natureRoot, RuinsPath + ruins[index % ruins.Length], position, NextFloat(random, 0f, 360f), index % 5 == 4 ? 0.9f : 2.7f);
+            ("Wall_ArchRound_Broken", new Vector3(-22f, 0f, -2f), 24f, 3.2f),
+            ("Wall_Broken", new Vector3(-27f, 0f, 1f), 90f, 2.8f),
+            ("Wall_Broken", new Vector3(-18f, 0f, 3f), 0f, 2.6f),
+            ("Bricks", new Vector3(-24f, 0f, 5f), 18f, 1.1f),
+            ("Crate", new Vector3(-19f, 0f, -1f), 40f, 0.9f),
+            ("DeadTree_1", new Vector3(-30f, 0f, 6f), 0f, 3.8f)
+        };
+        foreach ((string model, Vector3 position, float yaw, float height) in ruinSite)
+        {
+            CreateImportedProp(natureRoot, RuinsPath + model, position, yaw, height);
         }
     }
 
@@ -357,26 +448,56 @@ public sealed class ExpeditionSceneController : MonoBehaviour
         // before the player commits to exploring the island.
         CreateGatherable("Оставленные припасы", new Vector3(2.1f, 0f, -19.4f), ResourceType.Food, 3, new Color(0.62f, 0.32f, 0.18f), PrimitiveType.Cube);
 
-        for (int index = 0; index < 5; index++)
+        Vector3[] timberPositions =
         {
-            Vector3 position = RandomPoint(random, _mainIslandCenter, _mainIslandRadii, 0.58f);
-            CreateGatherable("Ветровальное дерево", position, ResourceType.Timber, 4 + index % 2, new Color(0.42f, 0.24f, 0.10f), PrimitiveType.Cylinder);
-        }
+            new(-38f, 0f, 9f), new(-27f, 0f, 21f), new(3f, 0f, 19f), new(15f, 0f, 29f)
+        };
+        foreach (Vector3 position in timberPositions)
+            CreateGatherable("Ветровальное дерево", position, ResourceType.Timber, 5, new Color(0.42f, 0.24f, 0.10f), PrimitiveType.Cylinder);
 
-        for (int index = 0; index < 4; index++)
+        Vector3[] stonePositions =
         {
-            Vector3 position = RandomPoint(random, _mainIslandCenter, _mainIslandRadii, 0.60f);
-            CreateGatherable("Небесный камень", position, ResourceType.Stone, 3 + index % 2, new Color(0.38f, 0.43f, 0.46f), PrimitiveType.Sphere);
-        }
+            new(-16f, 0f, -5f), new(-28f, 0f, -5f), new(31f, 0f, 16f)
+        };
+        foreach (Vector3 position in stonePositions)
+            CreateGatherable("Небесный камень", position, ResourceType.Stone, 4, new Color(0.38f, 0.43f, 0.46f), PrimitiveType.Sphere);
 
-        for (int index = 0; index < 4; index++)
+        Vector3[] herbPositions =
         {
-            Vector3 position = RandomPoint(random, _mainIslandCenter, _mainIslandRadii, 0.62f);
+            new(8f, 0f, -6f), new(13f, 0f, -2f), new(18f, 0f, 2f)
+        };
+        foreach (Vector3 position in herbPositions)
             CreateGatherable("Островные травы", position, ResourceType.Herb, 3, new Color(0.34f, 0.66f, 0.24f), PrimitiveType.Capsule);
-        }
 
         CreateGatherable("Обломки старого механизма", new Vector3(-23f, 0f, 11f), ResourceType.OldIron, 6, new Color(0.36f, 0.30f, 0.27f), PrimitiveType.Cube);
         CreateGatherable("Ягоды ветровика", new Vector3(15f, 0f, -5f), ResourceType.Food, 5, new Color(0.54f, 0.18f, 0.22f), PrimitiveType.Sphere);
+    }
+
+    private void CreateExplorationTrail()
+    {
+        Material trail = CreateMaterial(new Color(0.30f, 0.25f, 0.18f));
+        Vector3[] points =
+        {
+            new(0f, 0f, -22f),
+            new(-10f, 0f, -12f),
+            new(-22f, 0f, -2f),
+            new(1f, 0f, 2f),
+            new(24f, 0f, 10f)
+        };
+        for (int index = 0; index < points.Length - 1; index++)
+        {
+            Vector3 start = points[index];
+            Vector3 end = points[index + 1];
+            Vector3 direction = end - start;
+            GameObject segment = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            segment.name = "Readable Expedition Trail";
+            segment.transform.SetParent(transform);
+            segment.transform.position = (start + end) * 0.5f + Vector3.up * 0.025f;
+            segment.transform.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+            segment.transform.localScale = new Vector3(2.2f, 0.05f, direction.magnitude + 0.8f);
+            segment.GetComponent<Renderer>().sharedMaterial = trail;
+            DisableCollider(segment);
+        }
     }
 
     private void CreateGatherable(
@@ -421,44 +542,191 @@ public sealed class ExpeditionSceneController : MonoBehaviour
 
     private void CreateAnomalyArena()
     {
+        DungeonFloor = 0;
+        EnemiesRemaining = 0;
+    }
+
+    private void BuildDungeonFloor(int floor)
+    {
+        if (_dungeonFloorRoot != null)
+        {
+            _dungeonFloorRoot.gameObject.SetActive(false);
+            Destroy(_dungeonFloorRoot.gameObject);
+        }
+
+        _enemies.Clear();
+        DungeonFloor = Mathf.Clamp(floor, 1, DungeonFloorCount);
+        _dungeonFloorRoot = new GameObject($"Dungeon Floor {DungeonFloor}").transform;
+        _dungeonFloorRoot.SetParent(transform);
+
         GameObject exit = CreatePortalVisual("Разлом обратно", _anomalyCenter + new Vector3(0f, 0f, -16f), new Color(0.32f, 0.62f, 1f));
+        exit.transform.SetParent(_dungeonFloorRoot, true);
         exit.AddComponent<ExpeditionPortal>().Configure(this, ExpeditionPortalKind.LeaveAnomaly);
 
-        GameObject shrine = CreatePortalVisual("Сердце аномалии", _anomalyCenter + new Vector3(0f, 0f, 11.5f), new Color(1f, 0.30f, 0.76f));
-        shrine.transform.localScale *= 0.72f;
-        shrine.AddComponent<ExpeditionRewardShrine>().Configure(this);
+        GameObject gate = CreatePortalVisual(
+            IsFinalDungeonFloor ? "Сердце подземелья" : "Спуск глубже",
+            _anomalyCenter + new Vector3(0f, 0f, 11.5f),
+            IsFinalDungeonFloor ? new Color(1f, 0.30f, 0.76f) : new Color(0.58f, 0.28f, 1f));
+        gate.transform.SetParent(_dungeonFloorRoot, true);
+        gate.transform.localScale *= 0.72f;
+        gate.AddComponent<ExpeditionRewardShrine>().Configure(this);
 
-        Vector3[] enemyPositions =
+        CreateDungeonLandmarks(DungeonFloor);
+        CreateChest(_anomalyCenter + new Vector3(DungeonFloor % 2 == 0 ? -9f : 9f, 0f, 5f), DungeonFloor);
+
+        Vector3[] positions =
         {
-            _anomalyCenter + new Vector3(-8f, 0f, -2f),
-            _anomalyCenter + new Vector3(7f, 0f, 1f),
-            _anomalyCenter + new Vector3(-4f, 0f, 7f),
-            _anomalyCenter + new Vector3(5f, 0f, 8f)
+            _anomalyCenter + new Vector3(-8f, 0f, -5f),
+            _anomalyCenter + new Vector3(8f, 0f, -2f),
+            _anomalyCenter + new Vector3(-6f, 0f, 6f),
+            _anomalyCenter + new Vector3(5f, 0f, 8f),
+            _anomalyCenter + new Vector3(0f, 0f, 2f),
+            _anomalyCenter + new Vector3(9f, 0f, 7f)
         };
-        foreach (Vector3 position in enemyPositions)
+        int enemyCount = Mathf.Min(positions.Length, 3 + DungeonFloor);
+        for (int index = 0; index < enemyCount; index++)
         {
-            _enemies.Add(CreateEnemy(position));
+            _enemies.Add(CreateEnemy(
+                positions[index],
+                false,
+                true,
+                ResourceType.OldIron,
+                1 + DungeonFloor / 2,
+                false));
         }
 
         EnemiesRemaining = _enemies.Count;
+        ShowMessage($"Этаж {DungeonFloor}/{DungeonFloorCount}: сначала очистите центральный зал.", 3f);
     }
 
-    private ExpeditionEnemy CreateEnemy(Vector3 position)
+    private void CreateDungeonLandmarks(int floor)
+    {
+        Vector3 center = _anomalyCenter;
+        CreateImportedProp(_dungeonFloorRoot, RuinsPath + "Wall_ArchRound_Broken", center + new Vector3(0f, 0f, -7f), 0f, 3.4f);
+        CreateImportedProp(_dungeonFloorRoot, RuinsPath + "Wall_Broken", center + new Vector3(-10f, 0f, 0f), 90f, 3.0f);
+        CreateImportedProp(_dungeonFloorRoot, RuinsPath + "Wall_Broken", center + new Vector3(10f, 0f, 1f), 90f, 3.0f);
+        CreateImportedProp(_dungeonFloorRoot, RuinsPath + "Bricks", center + new Vector3(floor % 2 == 0 ? 7f : -7f, 0f, 7f), floor * 31f, 1.2f);
+    }
+
+    private ExpeditionEnemy CreateEnemy(
+        Vector3 position,
+        bool activeOutsideAnomaly,
+        bool countsForDungeon,
+        ResourceType lootType,
+        int lootAmount,
+        bool animal)
     {
         Material body = CreateMaterial(new Color(0.32f, 0.06f, 0.16f));
         Material eyes = CreateMaterial(new Color(1f, 0.30f, 0.12f));
-        GameObject enemy = new("Anomaly Fiend");
+        GameObject enemy = new(animal ? "Aggressive Sky Beast" : "Anomaly Fiend");
         enemy.transform.SetParent(transform);
         enemy.transform.position = position;
-        StylizedCharacterBuilder.BuildEnemy(enemy.transform, body, eyes);
+        if (animal)
+        {
+            CreateAnimalVisual(enemy.transform, body, eyes);
+        }
+        else
+        {
+            StylizedCharacterBuilder.BuildEnemy(enemy.transform, body, eyes);
+        }
         CapsuleCollider collider = enemy.AddComponent<CapsuleCollider>();
-        collider.center = new Vector3(0f, 0.9f, 0f);
-        collider.height = 1.9f;
-        collider.radius = 0.55f;
+        collider.center = new Vector3(0f, animal ? 0.65f : 0.9f, 0f);
+        collider.height = animal ? 1.2f : 1.9f;
+        collider.radius = animal ? 0.7f : 0.55f;
         collider.isTrigger = true;
         ExpeditionEnemy controller = enemy.AddComponent<ExpeditionEnemy>();
-        controller.Initialize(_hero, this, 82);
+        controller.Initialize(
+            _hero,
+            this,
+            animal ? 54 : 70 + DungeonFloor * 12,
+            activeOutsideAnomaly,
+            countsForDungeon,
+            lootType,
+            lootAmount);
         return controller;
+    }
+
+    private void CreateSurfaceThreats()
+    {
+        CreateEnemy(new Vector3(-18f, 0f, 15f), true, false, ResourceType.Hide, 2, true);
+        CreateEnemy(new Vector3(34f, 0f, -8f), true, false, ResourceType.Food, 3, true);
+        CreateEnemy(new Vector3(-34f, 0f, -4f), true, false, ResourceType.Hide, 2, true);
+    }
+
+    private void CreateAnimalVisual(Transform root, Material body, Material eyes)
+    {
+        GameObject torso = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        torso.transform.SetParent(root, false);
+        torso.transform.localPosition = new Vector3(0f, 0.72f, 0f);
+        torso.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        torso.transform.localScale = new Vector3(0.62f, 0.82f, 0.62f);
+        torso.GetComponent<Renderer>().sharedMaterial = body;
+        DisableCollider(torso);
+        GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        head.transform.SetParent(root, false);
+        head.transform.localPosition = new Vector3(0f, 0.82f, 0.92f);
+        head.transform.localScale = new Vector3(0.72f, 0.62f, 0.74f);
+        head.GetComponent<Renderer>().sharedMaterial = body;
+        DisableCollider(head);
+        for (int side = -1; side <= 1; side += 2)
+        {
+            GameObject eye = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            eye.transform.SetParent(root, false);
+            eye.transform.localPosition = new Vector3(side * 0.18f, 0.94f, 1.25f);
+            eye.transform.localScale = Vector3.one * 0.10f;
+            eye.GetComponent<Renderer>().sharedMaterial = eyes;
+            DisableCollider(eye);
+        }
+    }
+
+    private void CreateChest(Vector3 position, int floor)
+    {
+        Material wood = CreateMaterial(new Color(0.34f, 0.18f, 0.08f));
+        Material metal = CreateMaterial(new Color(0.44f, 0.38f, 0.24f));
+        GameObject chest = new($"Dungeon Chest {floor}");
+        chest.transform.SetParent(_dungeonFloorRoot);
+        chest.transform.position = position;
+        GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        box.transform.SetParent(chest.transform, false);
+        box.transform.localPosition = new Vector3(0f, 0.42f, 0f);
+        box.transform.localScale = new Vector3(1.5f, 0.72f, 1.0f);
+        box.GetComponent<Renderer>().sharedMaterial = wood;
+        DisableCollider(box);
+        GameObject lid = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        lid.transform.SetParent(chest.transform, false);
+        lid.transform.localPosition = new Vector3(0f, 0.88f, -0.42f);
+        lid.transform.localScale = new Vector3(1.56f, 0.22f, 1.05f);
+        lid.GetComponent<Renderer>().sharedMaterial = metal;
+        DisableCollider(lid);
+        chest.AddComponent<ExpeditionChest>().Configure(this, lid.transform, floor);
+    }
+
+    private void SpawnLoot(ResourceType type, int amount, Vector3 origin)
+    {
+        GameObject loot = GameObject.CreatePrimitive(type == ResourceType.OldIron ? PrimitiveType.Cube : PrimitiveType.Sphere);
+        loot.name = $"Loot {ResourceNames.GetShort(type)}";
+        loot.transform.SetParent(transform);
+        loot.transform.position = origin;
+        loot.transform.localScale = type == ResourceType.Relic ? Vector3.one * 0.42f : Vector3.one * 0.34f;
+        loot.GetComponent<Renderer>().sharedMaterial = CreateMaterial(GetLootColor(type));
+        DisableCollider(loot);
+        float angle = NextFloat(_lootRandom, 0f, Mathf.PI * 2f);
+        float distance = NextFloat(_lootRandom, 0.8f, 1.8f);
+        Vector3 offset = new(Mathf.Cos(angle) * distance, 0f, Mathf.Sin(angle) * distance);
+        loot.AddComponent<ExpeditionLootPickup>().Configure(this, type, amount, offset);
+    }
+
+    private static Color GetLootColor(ResourceType type)
+    {
+        return type switch
+        {
+            ResourceType.OldIron => new Color(0.32f, 0.38f, 0.42f),
+            ResourceType.Relic => new Color(0.82f, 0.34f, 0.92f),
+            ResourceType.SkyGlass => new Color(0.24f, 0.72f, 0.95f),
+            ResourceType.Hide => new Color(0.48f, 0.28f, 0.14f),
+            ResourceType.Food => new Color(0.65f, 0.20f, 0.16f),
+            _ => new Color(0.42f, 0.66f, 0.30f)
+        };
     }
 
     private GameObject CreatePortalVisual(string name, Vector3 position, Color color)
@@ -557,6 +825,13 @@ public sealed class ExpeditionSceneController : MonoBehaviour
     {
         float angle = NextFloat(random, 0f, Mathf.PI * 2f);
         float radius = Mathf.Sqrt(NextFloat(random, 0.08f, 1f)) * scale;
+        return center + new Vector3(Mathf.Cos(angle) * radii.x * radius, 0f, Mathf.Sin(angle) * radii.y * radius);
+    }
+
+    private static Vector3 RandomClusterPoint(System.Random random, Vector3 center, Vector2 radii)
+    {
+        float angle = NextFloat(random, 0f, Mathf.PI * 2f);
+        float radius = Mathf.Sqrt(NextFloat(random, 0.08f, 1f));
         return center + new Vector3(Mathf.Cos(angle) * radii.x * radius, 0f, Mathf.Sin(angle) * radii.y * radius);
     }
 
@@ -693,7 +968,7 @@ public sealed class ExpeditionHud : MonoBehaviour
     private GUIStyle _body;
     private GUIStyle _center;
     private Texture2D _panelTexture;
-    private bool _showBackpack = true;
+    private bool _showBackpack;
 
     public void Initialize(ExpeditionSceneController sceneController)
     {
@@ -724,7 +999,10 @@ public sealed class ExpeditionHud : MonoBehaviour
 
         Rect header = new(18f, 18f, 440f, 82f);
         GUI.Box(header, GUIContent.none, _panel);
-        GUI.Label(new Rect(header.x + 14f, header.y + 8f, 410f, 28f), _sceneController.IsInAnomaly ? "АНОМАЛИЯ • ОПАСНАЯ ЗОНА" : "ВНЕШНИЙ ОСТРОВ • ВЕТРОЛЕСЬЕ", _title);
+        string locationTitle = _sceneController.IsInAnomaly
+            ? $"ПОДЗЕМЕЛЬЕ • ЭТАЖ {_sceneController.DungeonFloor}/{_sceneController.DungeonFloorCount}"
+            : "ВНЕШНИЙ ОСТРОВ • ВЕТРОЛЕСЬЕ";
+        GUI.Label(new Rect(header.x + 14f, header.y + 8f, 410f, 28f), locationTitle, _title);
         GUI.Label(new Rect(header.x + 14f, header.y + 42f, 80f, 20f), "Здоровье", _body);
         Rect health = new(header.x + 98f, header.y + 46f, 220f, 13f);
         GUI.Box(health, GUIContent.none);
@@ -737,10 +1015,27 @@ public sealed class ExpeditionHud : MonoBehaviour
 
         if (_showBackpack)
         {
-            Rect backpack = new(width - 382f, 18f, 364f, 116f);
+            const float cellSize = 52f;
+            float gridWidth = _sceneController.Backpack.Width * cellSize;
+            float gridHeight = _sceneController.Backpack.Height * cellSize;
+            Rect backpack = new(width - gridWidth - 46f, 112f, gridWidth + 28f, gridHeight + 58f);
             GUI.Box(backpack, GUIContent.none, _panel);
-            GUI.Label(new Rect(backpack.x + 14f, backpack.y + 8f, 330f, 25f), $"РЮКЗАК {_sceneController.Backpack.SlotsUsed}/{_sceneController.Backpack.SlotCapacity}", _title);
-            GUI.Label(new Rect(backpack.x + 14f, backpack.y + 40f, 336f, 64f), _sceneController.Backpack.GetSummary(), _body);
+            GUI.Label(new Rect(backpack.x + 14f, backpack.y + 8f, backpack.width - 28f, 30f), $"РЮКЗАК  {_sceneController.Backpack.SlotsUsed}/{_sceneController.Backpack.SlotCapacity}", _title);
+            for (int y = 0; y < _sceneController.Backpack.Height; y++)
+            {
+                for (int x = 0; x < _sceneController.Backpack.Width; x++)
+                {
+                    Rect cell = new(backpack.x + 14f + x * cellSize, backpack.y + 42f + y * cellSize, cellSize - 3f, cellSize - 3f);
+                    GUI.Box(cell, GUIContent.none);
+                    DrawBackpackSlot(cell, x, y);
+                }
+            }
+        }
+        else
+        {
+            Rect compact = new(width - 242f, 18f, 224f, 34f);
+            GUI.Box(compact, GUIContent.none, _panel);
+            GUI.Label(compact, $"TAB • РЮКЗАК {_sceneController.Backpack.SlotsUsed}/{_sceneController.Backpack.SlotCapacity}", _center);
         }
 
         if (!string.IsNullOrEmpty(_sceneController.CurrentPrompt))
@@ -766,20 +1061,41 @@ public sealed class ExpeditionHud : MonoBehaviour
             GUI.Label(new Rect(width - 260f, height - 84f, 240f, 24f), $"Твари: {_sceneController.EnemiesRemaining}", _title);
         }
 
-#if UNITY_EDITOR
-        Rect anomalyButton = new(width - 244f, height - 52f, 108f, 26f);
-        Rect homeButton = new(width - 128f, height - 52f, 108f, 26f);
-        if (!_sceneController.IsInAnomaly && GUI.Button(anomalyButton, "DEV: АНОМАЛИЯ"))
-        {
-            _sceneController.EnterAnomaly(_sceneController.Hero);
-        }
-        if (GUI.Button(homeButton, "DEV: ДОМОЙ"))
-        {
-            _sceneController.RequestReturnHome(false);
-        }
-#endif
-
         GUI.matrix = previous;
+    }
+
+    private void DrawBackpackSlot(Rect cell, int x, int y)
+    {
+        foreach (ExpeditionBackpackSlot slot in _sceneController.Backpack.Slots)
+        {
+            if (slot.X != x || slot.Y != y)
+            {
+                continue;
+            }
+
+            Color previous = GUI.color;
+            GUI.color = GetResourceColor(slot.Type);
+            GUI.Box(new Rect(cell.x + 5f, cell.y + 5f, cell.width - 10f, cell.height - 10f), GUIContent.none);
+            GUI.color = previous;
+            GUI.Label(new Rect(cell.x + 4f, cell.y + 3f, cell.width - 8f, 22f), ResourceNames.GetShort(slot.Type), _center);
+            GUI.Label(new Rect(cell.x + 5f, cell.yMax - 22f, cell.width - 10f, 20f), slot.Amount.ToString(), _center);
+            return;
+        }
+    }
+
+    private static Color GetResourceColor(ResourceType type)
+    {
+        return type switch
+        {
+            ResourceType.Timber => new Color(0.46f, 0.27f, 0.11f),
+            ResourceType.Stone => new Color(0.38f, 0.43f, 0.46f),
+            ResourceType.Food => new Color(0.58f, 0.22f, 0.18f),
+            ResourceType.Herb => new Color(0.25f, 0.53f, 0.21f),
+            ResourceType.OldIron => new Color(0.30f, 0.36f, 0.40f),
+            ResourceType.Relic => new Color(0.62f, 0.28f, 0.76f),
+            ResourceType.SkyGlass => new Color(0.20f, 0.66f, 0.82f),
+            _ => new Color(0.50f, 0.38f, 0.20f)
+        };
     }
 
     private void OnDestroy()

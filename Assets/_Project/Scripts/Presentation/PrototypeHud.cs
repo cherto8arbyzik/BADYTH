@@ -142,11 +142,9 @@ public sealed class PrototypeHud : MonoBehaviour
         Rect gatherButton = GetGatherButtonRect();
         Rect gatherMenu = GetGatherMenuRect();
         Rect dayNight = GetDayNightRect();
-        Rect expedition = GetExpeditionButtonRect();
         Rect resourceDropdown = GetResourceDropdownRect();
         Rect placementStatus = GetPlacementStatusRect();
         return resourceBar.Contains(guiPosition) ||
-               expedition.Contains(guiPosition) ||
                dayNight.Contains(guiPosition) ||
                (ControlsOpen && controlsPanel.Contains(guiPosition)) ||
                (HasSelectedBuilding && !BuildMenuOpen && buildingPanel.Contains(guiPosition)) ||
@@ -224,8 +222,7 @@ public sealed class PrototypeHud : MonoBehaviour
 
         EnsureStyles();
         DrawResourceBar();
-        DrawCompactExpedition();
-        DrawDayNightButtons();
+        DrawDayNightClock();
         if (!_showBuildMenu &&
             (_placement == null || !_placement.IsPlacing) &&
             (_roadPlacement == null || !_roadPlacement.IsPlacing))
@@ -297,43 +294,27 @@ public sealed class PrototypeHud : MonoBehaviour
         }
     }
 
-    private void DrawDayNightButtons()
+    private void DrawDayNightClock()
     {
         Rect panel = GetDayNightRect();
-        float half = (panel.width - 5f) * 0.5f;
-        Color previous = GUI.color;
-        GUI.color = _session != null && _session.Phase == GamePhase.Day ? new Color(1f, 0.83f, 0.45f) : Color.white;
-        if (GUI.Button(new Rect(panel.x, panel.y, half, panel.height), "DAY") && _session != null)
-        {
-            _session.SetDayForDevelopment();
-        }
-
-        GUI.color = _session != null && _session.Phase == GamePhase.Night ? new Color(0.55f, 0.70f, 1f) : Color.white;
-        if (GUI.Button(new Rect(panel.x + half + 5f, panel.y, half, panel.height), "NIGHT") && _session != null)
-        {
-            _session.SetNightForDevelopment();
-        }
-        GUI.color = previous;
-    }
-
-    private void DrawCompactExpedition()
-    {
-        if (_expedition == null)
+        GUI.Box(panel, GUIContent.none, _buildDockStyle);
+        if (_session == null)
         {
             return;
         }
 
-        Rect button = GetExpeditionButtonRect();
-        string label = _expedition.IsActive
-            ? $"ПЕРЕХОД {Mathf.RoundToInt(_expedition.Progress * 100f)}%"
-            : "ИССЛЕДОВАТЬ ОСТРОВ";
-        bool previousEnabled = GUI.enabled;
-        GUI.enabled = !_expedition.IsActive;
-        if (GUI.Button(button, label))
+        string phase = _session.Phase switch
         {
-            _expedition.TryStart(out _);
-        }
-        GUI.enabled = previousEnabled;
+            GamePhase.Dawn => "РАССВЕТ",
+            GamePhase.Dusk => "ЗАКАТ",
+            GamePhase.Night => "НОЧЬ",
+            GamePhase.Defeat => "ПОРАЖЕНИЕ",
+            _ => "ДЕНЬ"
+        };
+        int remaining = Mathf.CeilToInt(_session.PhaseRemaining);
+        string time = $"{remaining / 60:00}:{remaining % 60:00}";
+        GUI.Label(new Rect(panel.x + 12f, panel.y + 5f, panel.width - 24f, 24f), phase, _phaseStyle);
+        GUI.Label(new Rect(panel.x + 12f, panel.y + 27f, panel.width - 24f, 22f), $"до смены  {time}", _hintStyle);
     }
 
     private void DrawGatherButton()
@@ -479,45 +460,6 @@ public sealed class PrototypeHud : MonoBehaviour
                 _hintStyle);
         }
 
-        DrawExpeditionControl(panel);
-    }
-
-    private void DrawExpeditionControl(Rect panel)
-    {
-        if (_expedition == null)
-        {
-            return;
-        }
-
-        float buttonWidth = Mathf.Min(245f, panel.width * 0.42f);
-        Rect buttonRect = new(
-            panel.xMax - buttonWidth - 14f,
-            panel.y + 74f,
-            buttonWidth,
-            24f);
-        Rect reportRect = new(
-            panel.x + 14f,
-            panel.y + 74f,
-            panel.width - buttonWidth - 38f,
-            24f);
-
-        if (_expedition.IsActive)
-        {
-            GUI.Label(reportRect, $"Переход на остров #{_expedition.CompletedExpeditions + 1}", _hintStyle);
-            GUI.Box(buttonRect, GUIContent.none, _barBackgroundStyle);
-            GUI.Box(
-                new Rect(buttonRect.x, buttonRect.y, buttonRect.width * _expedition.Progress, buttonRect.height),
-                GUIContent.none,
-                _barFillStyle);
-            GUI.Label(buttonRect, $"ЗАГРУЗКА {Mathf.RoundToInt(_expedition.Progress * 100f)}%", _centeredHintStyle);
-            return;
-        }
-
-        GUI.Label(reportRect, _expedition.LastReport, _hintStyle);
-        if (GUI.Button(buttonRect, "ЛИЧНАЯ ВЫЛАЗКА • " + _expedition.GetCostSummary()))
-        {
-            _expedition.TryStart(out _);
-        }
     }
 
     private string BuildBasicResourceSummary()
@@ -926,7 +868,7 @@ public sealed class PrototypeHud : MonoBehaviour
 
     private static Rect GetDayNightRect()
     {
-        return new Rect(Screen.width - 210f, Screen.height - 54f, 196f, 40f);
+        return new Rect(Screen.width - 202f, Screen.height - 72f, 188f, 58f);
     }
 
     private static Rect GetResourceBarRect()
@@ -956,11 +898,6 @@ public sealed class PrototypeHud : MonoBehaviour
         const float height = 94f;
         Rect gather = GetGatherButtonRect();
         return new Rect(Mathf.Max(8f, gather.x - 40f), gather.y - height - 10f, Mathf.Min(width, Screen.width - 16f), height);
-    }
-
-    private static Rect GetExpeditionButtonRect()
-    {
-        return new Rect(Screen.width - 182f, 16f, 166f, 48f);
     }
 
     private static Rect GetPhasePanelRect()
@@ -1007,9 +944,19 @@ public sealed class PrototypeHud : MonoBehaviour
 
     private string BuildPhaseText()
     {
+        if (_session.Phase == GamePhase.Dawn)
+        {
+            return "DAWN  -  the island wakes";
+        }
+
         if (_session.Phase == GamePhase.Day)
         {
-            return "DAY  -  no automatic timer";
+            return "DAY  -  settlement work";
+        }
+
+        if (_session.Phase == GamePhase.Dusk)
+        {
+            return "DUSK  -  prepare defenses";
         }
 
         if (_session.Phase == GamePhase.Night)
@@ -1027,6 +974,11 @@ public sealed class PrototypeHud : MonoBehaviour
         if (_session == null || _session.Phase == GamePhase.Day)
         {
             return new Color(0.96f, 0.77f, 0.34f);
+        }
+
+        if (_session.Phase == GamePhase.Dawn || _session.Phase == GamePhase.Dusk)
+        {
+            return new Color(1f, 0.52f, 0.28f);
         }
 
         if (_session.Phase == GamePhase.Night)

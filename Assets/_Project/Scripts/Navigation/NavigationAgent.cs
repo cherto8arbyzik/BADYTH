@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Hollowwest.Core;
 using Hollowwest.Gameplay;
+using Hollowwest.Selection;
 using UnityEngine;
 
 namespace Hollowwest.Navigation
@@ -20,6 +21,8 @@ public sealed class NavigationAgent : MonoBehaviour
     private RoadNetwork _roadNetwork;
     private float _roadSpeedMultiplier = 1f;
     private int _waypointIndex;
+    private Vector3 _lastGroundedPosition;
+    private bool _hasGroundedPosition;
 
     public bool IsMoving => _waypointIndex < _path.Count;
     public float Speed
@@ -69,6 +72,8 @@ public sealed class NavigationAgent : MonoBehaviour
         {
             ActiveAgentsInternal.Add(this);
         }
+
+        ProjectToGround();
     }
 
     private void OnDisable()
@@ -76,8 +81,24 @@ public sealed class NavigationAgent : MonoBehaviour
         ActiveAgentsInternal.Remove(this);
     }
 
+    private void Start()
+    {
+        ProjectToGround();
+    }
+
     private void Update()
     {
+        if (!ProjectToGround())
+        {
+            if (_hasGroundedPosition)
+            {
+                transform.position = _lastGroundedPosition;
+            }
+
+            Stop();
+            return;
+        }
+
         if (!IsMoving)
         {
             return;
@@ -111,10 +132,19 @@ public sealed class NavigationAgent : MonoBehaviour
 
         direction.Normalize();
         float movementSpeed = speed * CurrentSpeedMultiplier;
-        transform.position = Vector3.MoveTowards(
+        Vector3 nextPosition = Vector3.MoveTowards(
             transform.position,
             transform.position + direction,
             movementSpeed * Time.deltaTime);
+        if (!GroundSurface.TryProjectPoint(nextPosition, out Vector3 groundedPosition))
+        {
+            Stop();
+            return;
+        }
+
+        transform.position = groundedPosition;
+        _lastGroundedPosition = groundedPosition;
+        _hasGroundedPosition = true;
 
         if (direction.sqrMagnitude > 0.001f)
         {
@@ -149,6 +179,19 @@ public sealed class NavigationAgent : MonoBehaviour
         }
 
         return separation;
+    }
+
+    private bool ProjectToGround()
+    {
+        if (GroundSurface.TryProjectPoint(transform.position, out Vector3 groundedPosition))
+        {
+            transform.position = groundedPosition;
+            _lastGroundedPosition = groundedPosition;
+            _hasGroundedPosition = true;
+            return true;
+        }
+
+        return false;
     }
 }
 }

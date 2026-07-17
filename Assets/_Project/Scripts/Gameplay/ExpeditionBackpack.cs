@@ -9,24 +9,37 @@ namespace Hollowwest.Gameplay
 
 public sealed class ExpeditionBackpack
 {
-    private readonly Dictionary<ResourceType, int> _contents = new();
+    private readonly List<ExpeditionBackpackSlot> _slots = new();
 
-    public ExpeditionBackpack(int slotCapacity = 8, int stackCapacity = 10)
+    public ExpeditionBackpack(int width = 8, int height = 5, int stackCapacity = 10)
     {
-        SlotCapacity = Mathf.Max(1, slotCapacity);
+        Width = Mathf.Max(1, width);
+        Height = Mathf.Max(1, height);
         StackCapacity = Mathf.Max(1, stackCapacity);
     }
 
     public event Action Changed;
 
-    public int SlotCapacity { get; }
+    public int Width { get; }
+    public int Height { get; }
+    public int SlotCapacity => Width * Height;
     public int StackCapacity { get; }
-    public int SlotsUsed => _contents.Count;
+    public int SlotsUsed => _slots.Count;
     public bool IsFull => SlotsUsed >= SlotCapacity && !HasStackSpace();
+    public IReadOnlyList<ExpeditionBackpackSlot> Slots => _slots;
 
     public int Get(ResourceType type)
     {
-        return _contents.TryGetValue(type, out int amount) ? amount : 0;
+        int total = 0;
+        foreach (ExpeditionBackpackSlot slot in _slots)
+        {
+            if (slot.Type == type)
+            {
+                total += slot.Amount;
+            }
+        }
+
+        return total;
     }
 
     public int TryAdd(ResourceType type, int amount)
@@ -37,27 +50,47 @@ public sealed class ExpeditionBackpack
             return 0;
         }
 
-        int current = Get(type);
-        if (current == 0 && SlotsUsed >= SlotCapacity)
+        int remaining = requested;
+        for (int index = 0; index < _slots.Count && remaining > 0; index++)
         {
-            return 0;
+            ExpeditionBackpackSlot slot = _slots[index];
+            if (slot.Type != type || slot.Amount >= StackCapacity)
+            {
+                continue;
+            }
+
+            int added = Mathf.Min(remaining, StackCapacity - slot.Amount);
+            _slots[index] = slot.WithAmount(slot.Amount + added);
+            remaining -= added;
         }
 
-        int accepted = Mathf.Min(requested, StackCapacity - current);
-        if (accepted <= 0)
+        while (remaining > 0 && TryFindFreeCell(out int x, out int y))
         {
-            return 0;
+            int added = Mathf.Min(remaining, StackCapacity);
+            _slots.Add(new ExpeditionBackpackSlot(type, added, x, y));
+            remaining -= added;
         }
 
-        _contents[type] = current + accepted;
-        Changed?.Invoke();
+        int accepted = requested - remaining;
+        if (accepted > 0)
+        {
+            Changed?.Invoke();
+        }
+
         return accepted;
     }
 
     public IReadOnlyList<ResourceAmount> GetContents()
     {
-        List<ResourceAmount> result = new(_contents.Count);
-        foreach (KeyValuePair<ResourceType, int> entry in _contents)
+        Dictionary<ResourceType, int> totals = new();
+        foreach (ExpeditionBackpackSlot slot in _slots)
+        {
+            totals.TryGetValue(slot.Type, out int amount);
+            totals[slot.Type] = amount + slot.Amount;
+        }
+
+        List<ResourceAmount> result = new(totals.Count);
+        foreach (KeyValuePair<ResourceType, int> entry in totals)
         {
             result.Add(new ResourceAmount(entry.Key, entry.Value));
         }
@@ -68,24 +101,11 @@ public sealed class ExpeditionBackpack
 
     public void LoseHalf()
     {
-        List<ResourceType> empty = new();
-        List<ResourceType> keys = new(_contents.Keys);
-        foreach (ResourceType type in keys)
+        IReadOnlyList<ResourceAmount> contents = GetContents();
+        _slots.Clear();
+        foreach (ResourceAmount resource in contents)
         {
-            int remaining = _contents[type] / 2;
-            if (remaining <= 0)
-            {
-                empty.Add(type);
-            }
-            else
-            {
-                _contents[type] = remaining;
-            }
-        }
-
-        foreach (ResourceType type in empty)
-        {
-            _contents.Remove(type);
+            TryAdd(resource.Type, resource.Amount / 2);
         }
 
         Changed?.Invoke();
@@ -93,7 +113,7 @@ public sealed class ExpeditionBackpack
 
     public string GetSummary()
     {
-        if (_contents.Count == 0)
+        if (_slots.Count == 0)
         {
             return "рюкзак пуст";
         }
@@ -116,15 +136,66 @@ public sealed class ExpeditionBackpack
 
     private bool HasStackSpace()
     {
-        foreach (int amount in _contents.Values)
+        foreach (ExpeditionBackpackSlot slot in _slots)
         {
-            if (amount < StackCapacity)
+            if (slot.Amount < StackCapacity)
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private bool TryFindFreeCell(out int freeX, out int freeY)
+    {
+        for (int y = 0; y < Height; y++)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                bool occupied = false;
+                foreach (ExpeditionBackpackSlot slot in _slots)
+                {
+                    if (slot.X == x && slot.Y == y)
+                    {
+                        occupied = true;
+                        break;
+                    }
+                }
+
+                if (!occupied)
+                {
+                    freeX = x;
+                    freeY = y;
+                    return true;
+                }
+            }
+        }
+
+        freeX = -1;
+        freeY = -1;
+        return false;
+    }
+}
+
+public readonly struct ExpeditionBackpackSlot
+{
+    public ExpeditionBackpackSlot(ResourceType type, int amount, int x, int y)
+    {
+        Type = type;
+        Amount = amount;
+        X = x;
+        Y = y;
+    }
+
+    public ResourceType Type { get; }
+    public int Amount { get; }
+    public int X { get; }
+    public int Y { get; }
+
+    public ExpeditionBackpackSlot WithAmount(int amount)
+    {
+        return new ExpeditionBackpackSlot(Type, amount, X, Y);
     }
 }
 

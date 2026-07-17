@@ -95,5 +95,25 @@ public sealed class GridNavigationServiceTests
         Assert.That(grid.IsBlocked(permanentObstacle), Is.True);
         Assert.That(grid.IsBlocked(constructionCell), Is.False);
     }
+
+    [Test]
+    public void CellToWorld_UsesTerrainProjectorWithoutChangingCellMapping()
+    {
+        GridNavigationService grid = new(
+            new Vector3(-5f, 0f, -5f),
+            10,
+            10,
+            1f,
+            point => new Vector3(point.x, point.x * 0.5f + point.z, point.z));
+
+        Vector2Int cell = new(7, 3);
+        Vector3 unprojected = grid.CellToWorldUnprojected(cell);
+        Vector3 projected = grid.CellToWorld(cell);
+
+        Assert.That(projected.x, Is.EqualTo(unprojected.x).Within(0.0001f));
+        Assert.That(projected.z, Is.EqualTo(unprojected.z).Within(0.0001f));
+        Assert.That(projected.y, Is.EqualTo(projected.x * 0.5f + projected.z).Within(0.0001f));
+        Assert.That(grid.WorldToCell(projected), Is.EqualTo(cell));
+    }
 }
 }

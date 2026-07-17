@@ -73,7 +73,12 @@ public sealed class PlacementGridOverlay : MonoBehaviour
         }
 
         Vector3 snapped = Snap(worldPosition, _cellSize);
-        snapped.y = 0.095f;
+        if (Hollowwest.Selection.GroundSurface.TryProjectPoint(snapped, out Vector3 projected))
+        {
+            snapped = projected;
+        }
+
+        snapped.y += 0.095f;
         _gridRoot.transform.position = snapped;
         _gridRoot.SetActive(true);
     }
